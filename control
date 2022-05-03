@@ -1,6 +1,6 @@
 Package: com.level3tjg.twitchadblock
 Name: TwitchAdBlock
-Version: 0.0.4
+Version: 0.0.5
 Architecture: iphoneos-arm
 Description: Block Twitch video ads
 Depiction: https://level3tjg.me/repo/depictions/?p=com.level3tjg.twitchadblock

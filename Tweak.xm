@@ -20,8 +20,6 @@
     : TWBaseTableViewController
 @end
 
-NSIndexPath *selectedIndexPath;
-
 %hook _TtC6Twitch32PreferenceSettingsViewController
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
   return %orig + 1;
@@ -61,15 +59,6 @@ NSIndexPath *selectedIndexPath;
            @"restart";
   return %orig;
 }
-- (void)settingsCellSwitchToggled:
-    (_TtC6Twitch27SettingsSwitchTableViewCell *)sender {
-  if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockSwitchCell"]) {
-    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn
-                                            forKey:@"TWAdBlockEnabled"];
-  } else {
-    %orig;
-  }
-}
 %end
 
 %hook _TtC6Twitch27SettingsSwitchTableViewCell
@@ -98,7 +87,32 @@ NSIndexPath *selectedIndexPath;
 }
 %end
 
+static void (*orig_settingsCellSwitchToggled)(
+    id self, SEL _cmd, _TtC6Twitch27SettingsSwitchTableViewCell *sender);
+static void hook_settingsCellSwitchToggled(
+    id self, SEL _cmd, _TtC6Twitch27SettingsSwitchTableViewCell *sender) {
+  if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockSwitchCell"])
+    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn
+                                            forKey:@"TWAdBlockEnabled"];
+  else if (orig_settingsCellSwitchToggled)
+    orig_settingsCellSwitchToggled(self, _cmd, sender);
+}
+
 %ctor {
+  Class preferenceSettingsViewControllerClass =
+      %c(_TtC6Twitch32PreferenceSettingsViewController);
+  SEL settingsCellSwitchToggledSelector =
+      NSSelectorFromString(@"settingsCellSwitchToggled:");
+  if (class_getInstanceMethod(preferenceSettingsViewControllerClass,
+                              settingsCellSwitchToggledSelector))
+    MSHookMessageEx(preferenceSettingsViewControllerClass,
+                    settingsCellSwitchToggledSelector,
+                    (IMP)hook_settingsCellSwitchToggled,
+                    (IMP *)&orig_settingsCellSwitchToggled);
+  else
+    class_addMethod(preferenceSettingsViewControllerClass,
+                    settingsCellSwitchToggledSelector,
+                    (IMP)hook_settingsCellSwitchToggled, "v@:@");
   if (![[NSUserDefaults standardUserDefaults] objectForKey:@"TWAdBlockEnabled"])
     [[NSUserDefaults standardUserDefaults] setBool:YES
                                             forKey:@"TWAdBlockEnabled"];
