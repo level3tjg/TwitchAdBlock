@@ -1,6 +1,7 @@
 // https://github.com/PoomSmart/IAmYouTube/blob/main/Tweak.x
 // Allows low latency player while sideloaded
 
+#import <Foundation/Foundation.h>
 #import <dlfcn.h>
 
 #define TW_BUNDLE_ID @"tv.twitch"
@@ -10,7 +11,7 @@
 
 - (NSString *)bundleIdentifier {
   NSArray *address = [NSThread callStackReturnAddresses];
-  Dl_info info = {0};
+  Dl_info info;
   if (dladdr((void *)[address[2] longLongValue], &info) == 0)
     return %orig;
   NSString *path = [NSString stringWithUTF8String:info.dli_fname];

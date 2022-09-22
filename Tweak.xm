@@ -1,119 +1,127 @@
-#import <UIKit/UIKit.h>
-#import <substrate.h>
+#import <Foundation/Foundation.h>
 
-@interface _TtC6Twitch27SettingsSwitchTableViewCell : UITableViewCell
-@property BOOL isOn;
-@property id delegate;
-- (void)configureWithTitle:(NSString *)title
-                   subtitle:(NSString *)subtitle
-                  isEnabled:(BOOL)isEnabled
-                       isOn:(BOOL)isOn
-    accessibilityIdentifier:(NSString *)accessibilityIdentifier;
-@end
-
-@interface TWBaseTableViewController
-    : UIViewController <UITableViewDelegate, UITableViewDataSource>
-@property UITableView *tableView;
-@end
-
-@interface _TtC6Twitch32PreferenceSettingsViewController
-    : TWBaseTableViewController
-@end
-
-%hook _TtC6Twitch32PreferenceSettingsViewController
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-  return %orig + 1;
-}
-- (NSInteger)tableView:(UITableView *)tableView
-    numberOfRowsInSection:(NSInteger)section {
-  if (section == [self numberOfSectionsInTableView:tableView] - 1)
-    return 1;
-  return %orig;
-}
-- (UITableViewCell *)tableView:(UITableView *)tableView
-         cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-  UITableViewCell *cell;
-  if ([indexPath isMemberOfClass:NSIndexPath.class] &&
-      indexPath.section == [self numberOfSectionsInTableView:tableView] - 1 &&
-      indexPath.row == 0) {
-    cell = [[%c(_TtC6Twitch27SettingsSwitchTableViewCell) alloc]
-          initWithStyle:UITableViewCellStyleDefault
-        reuseIdentifier:@"AdBlockSwitchCell"];
-    [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
-             configureWithTitle:@"Ad Block"
-                       subtitle:nil
-                      isEnabled:YES
-                           isOn:[[NSUserDefaults standardUserDefaults]
-                                    boolForKey:@"TWAdBlockEnabled"]
-        accessibilityIdentifier:@"AdBlockSwitchCell"];
-    [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
-  } else {
-    cell = %orig;
-  }
-  return cell;
-}
-- (NSString *)tableView:(UITableView *)tableView
-    titleForFooterInSection:(NSInteger)section {
-  if (section == [self numberOfSectionsInTableView:tableView] - 1)
-    return @"Choose whether you want to block ads or not. Requires app "
-           @"restart";
-  return %orig;
-}
-%end
-
-%hook _TtC6Twitch27SettingsSwitchTableViewCell
-- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
-  if (CGRectContainsPoint(self.contentView.bounds, point))
-    return nil;
-  return %orig;
-}
-%end
+#define PROXY_URL @"https://proxy.level3tjg.me/:path"
 
 %hook _TtC6Twitch19TheaterAdController
 - (void)theaterWasPresented:(NSNotification *)notification {
   %orig;
-  if ([[NSUserDefaults standardUserDefaults] boolForKey:@"TWAdBlockEnabled"]) {
-    const char *ivars[] = {
-        "displayAdController",
-        "videoAdController",
-        "vastAdController",
-    };
-    for (int i = 0; i < sizeof(ivars) / sizeof(const char *); i++) {
-      if (class_getInstanceVariable(object_getClass(self), ivars[i])) {
-        MSHookIvar<id>(self, ivars[i]) = NULL;
-      }
-    }
-  }
+  if (![[NSUserDefaults standardUserDefaults] boolForKey:@"TWAdBlockEnabled"])
+    return;
+  const char *ivars[] = {
+      "displayAdController",
+      "videoAdController",
+      "vastAdController",
+  };
+  for (int i = 0; i < sizeof(ivars) / sizeof(const char *); i++)
+    if (class_getInstanceVariable(object_getClass(self), ivars[i]))
+      MSHookIvar<id>(self, ivars[i]) = NULL;
 }
 %end
 
-static void (*orig_settingsCellSwitchToggled)(
-    id self, SEL _cmd, _TtC6Twitch27SettingsSwitchTableViewCell *sender);
-static void hook_settingsCellSwitchToggled(
-    id self, SEL _cmd, _TtC6Twitch27SettingsSwitchTableViewCell *sender) {
-  if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockSwitchCell"])
-    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn
-                                            forKey:@"TWAdBlockEnabled"];
-  else if (orig_settingsCellSwitchToggled)
-    orig_settingsCellSwitchToggled(self, _cmd, sender);
+static NSURL *proxyURLForURL(NSURL *url) {
+  if (![url.host isEqualToString:@"usher.ttvnw.net"])
+    return url;
+
+  NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+
+  if (![userDefaults boolForKey:@"TWAdBlockEnabled"] ||
+      ![userDefaults boolForKey:@"TWAdBlockProxyEnabled"])
+    return url;
+
+  NSURL *proxy =
+      [userDefaults boolForKey:@"TWAdBlockCustomProxyEnabled"]
+          ? [NSURL URLWithString:[userDefaults objectForKey:@"TWAdBlockProxy"]]
+          : [NSURL URLWithString:PROXY_URL];
+
+  // Get token dictionary
+  NSURLComponents *components = [NSURLComponents componentsWithURL:url
+                                           resolvingAgainstBaseURL:YES];
+  NSUInteger tokenQueryItemIdx = [components.queryItems
+      indexOfObjectPassingTest:^(NSURLQueryItem *queryItem, NSUInteger idx,
+                                 BOOL *stop) {
+        if ([queryItem.name isEqualToString:@"token"]) {
+          *stop = YES;
+          return YES;
+        }
+        return NO;
+      }];
+  NSDictionary *tokenDictionary;
+  if (tokenQueryItemIdx != NSNotFound) {
+    NSURLQueryItem *tokenQueryItem = components.queryItems[tokenQueryItemIdx];
+    tokenDictionary = [NSJSONSerialization
+        JSONObjectWithData:[tokenQueryItem.value
+                               dataUsingEncoding:NSUTF8StringEncoding]
+                   options:0
+                     error:nil];
+  }
+
+  // Validate
+
+  // Not sure if this flag is available for VODs, for now we'll just use the
+  // proxy anyways
+  if (tokenDictionary && tokenDictionary[@"server_ads"] &&
+      ![tokenDictionary[@"server_ads"] boolValue])
+    return url;
+
+  if (!proxy || ![proxy.scheme hasPrefix:@"http"] || !proxy.host)
+    return url;
+
+  // Substitute
+  NSString *channel = tokenDictionary
+                          ? tokenDictionary[@"channel"]
+                          : [url.path stringByDeletingPathExtension];
+  NSString *path = [[NSString stringWithFormat:@"%@?%@", url.path, url.query]
+      substringFromIndex:1];
+  NSString *playlist =
+      [NSString stringWithFormat:@"%@?%@", url.lastPathComponent, url.query];
+  NSDictionary *substitutes = @{
+    @"channel" : channel,
+    @"path" : path,
+    @"playlist" : playlist,
+  };
+  for (NSString *key in substitutes.allKeys)
+    proxy =
+        [NSURL URLWithString:
+                   [proxy.absoluteString
+                       stringByReplacingOccurrencesOfString:
+                           [@":" stringByAppendingString:key]
+                                                 withString:substitutes[key]]];
+
+  return proxy;
 }
 
-%ctor {
-  Class preferenceSettingsViewControllerClass =
-      %c(_TtC6Twitch32PreferenceSettingsViewController);
-  SEL settingsCellSwitchToggledSelector =
-      NSSelectorFromString(@"settingsCellSwitchToggled:");
-  if (class_getInstanceMethod(preferenceSettingsViewControllerClass,
-                              settingsCellSwitchToggledSelector))
-    MSHookMessageEx(preferenceSettingsViewControllerClass,
-                    settingsCellSwitchToggledSelector,
-                    (IMP)hook_settingsCellSwitchToggled,
-                    (IMP *)&orig_settingsCellSwitchToggled);
-  else
-    class_addMethod(preferenceSettingsViewControllerClass,
-                    settingsCellSwitchToggledSelector,
-                    (IMP)hook_settingsCellSwitchToggled, "v@:@");
-  if (![[NSUserDefaults standardUserDefaults] objectForKey:@"TWAdBlockEnabled"])
-    [[NSUserDefaults standardUserDefaults] setBool:YES
-                                            forKey:@"TWAdBlockEnabled"];
+%hook TWHLSResource
+- (NSURL *)URLWithAllowAudioOnly:(BOOL)allowAudioOnly
+                     allowSource:(BOOL)allowSource
+                     maxAVCLevel:(NSString *)maxAVCLevel {
+  NSURL *url = %orig;
+  return proxyURLForURL(url);
 }
+%end
+
+%hook _TtC6Twitch18LiveHLSURLProvider
+- (NSURL *)manifestURLWithToken:(NSString *)token
+                tokenDictionary:(NSDictionary *)tokenDictionary
+                      signature:(NSString *)signature {
+  NSURL *url = %orig;
+  return proxyURLForURL(url);
+}
+%end
+
+%hook TWVODHLSProvider
+- (NSURL *)manifestURLWithToken:(NSString *)token
+                tokenDictionary:(NSDictionary *)tokenDictionary
+                      signature:(NSString *)signature {
+  NSURL *url = %orig;
+  return proxyURLForURL(url);
+}
+%end
+
+%hook TWHLSProvider
+- (NSURL *)manifestURLWithToken:(NSString *)token
+                tokenDictionary:(NSDictionary *)tokenDictionary
+                      signature:(NSString *)signature {
+  NSURL *url = %orig;
+  return proxyURLForURL(url);
+}
+%end
