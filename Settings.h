@@ -3,6 +3,10 @@
 
 #define PROXY_URL @"https://proxy.level3tjg.me/:path"
 
+@interface UIFont (TwitchCoreUI)
+@property(class) UIFont *twitchBody;
+@end
+
 @interface _TtC12TwitchCoreUI21TWDefaultThemeManager : NSObject
 + (instancetype)defaultThemeManager;
 @end
@@ -15,13 +19,16 @@
 @end
 
 @interface TWThemeableView : UIView
+@property BOOL applyShadowPathForElevation;
 @property id<TWCoreUITheme> lastConfiguredTheme;
+@property _TtC12TwitchCoreUI21TWDefaultThemeManager *themeManager;
 - (instancetype)initWithFrame:(CGRect)frame
                  themeManager:
                      (_TtC12TwitchCoreUI21TWDefaultThemeManager *)themeManager;
 @end
 
-@interface _TtC12TwitchCoreUI17StandardTextField : TWThemeableView
+@interface _TtC12TwitchCoreUI17StandardTextField
+    : TWThemeableView <UITextFieldDelegate>
 @end
 
 @interface TWAdBlockProxyTextField : _TtC12TwitchCoreUI17StandardTextField

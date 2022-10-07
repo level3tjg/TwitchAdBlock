@@ -9,12 +9,11 @@
 - (void)viewDidLoad {
   %orig;
   self.title = @"TwitchAdBlock";
-  self.tableView.contentInsetAdjustmentBehavior =
-      UIScrollViewContentInsetAdjustmentNever;
+  self.tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
   self.tableView.contentInset = UIEdgeInsetsMake(20, 0, 0, 0);
-  [self.view addGestureRecognizer:[[UITapGestureRecognizer alloc]
-                                      initWithTarget:self.view
-                                              action:@selector(endEditing:)]];
+  [self.view
+      addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self.view
+                                                                   action:@selector(endEditing:)]];
 }
 %new
 - (void)settingsCellSwitchToggled:(UISwitch *)sender {
@@ -25,26 +24,22 @@
 
     NSIndexSet *sections = [NSIndexSet indexSetWithIndex:1];
     if (sender.isOn) {
-      [self.tableView insertSections:sections
-                    withRowAnimation:UITableViewRowAnimationFade];
+      [self.tableView insertSections:sections withRowAnimation:UITableViewRowAnimationFade];
     } else {
-      [self.tableView deleteSections:sections
-                    withRowAnimation:UITableViewRowAnimationFade];
+      [self.tableView deleteSections:sections withRowAnimation:UITableViewRowAnimationFade];
       [userDefaults setBool:NO forKey:@"TWAdBlockProxyEnabled"];
       [userDefaults setBool:NO forKey:@"TWAdBlockCustomProxyEnabled"];
       self.proxy = NO;
       self.customProxy = NO;
     }
 
-  } else if ([sender.accessibilityIdentifier
-                 isEqualToString:@"AdBlockProxySwitchCell"]) {
+  } else if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockProxySwitchCell"]) {
     [userDefaults setBool:sender.isOn forKey:@"TWAdBlockProxyEnabled"];
     self.proxy = sender.isOn;
 
     NSMutableArray *indexPaths = [NSMutableArray array];
     [indexPaths addObject:[NSIndexPath indexPathForRow:1 inSection:1]];
-    if (self.customProxy)
-      [indexPaths addObject:[NSIndexPath indexPathForRow:2 inSection:1]];
+    if (self.customProxy) [indexPaths addObject:[NSIndexPath indexPathForRow:2 inSection:1]];
     if (sender.isOn) {
       [self.tableView insertRowsAtIndexPaths:indexPaths
                             withRowAnimation:UITableViewRowAnimationFade];
@@ -59,8 +54,7 @@
       }
     }
 
-  } else if ([sender.accessibilityIdentifier
-                 isEqualToString:@"AdBlockCustomProxySwitchCell"]) {
+  } else if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockCustomProxySwitchCell"]) {
     [userDefaults setBool:sender.isOn forKey:@"TWAdBlockCustomProxyEnabled"];
     self.customProxy = sender.isOn;
 
@@ -82,84 +76,78 @@
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
   return self.adblock ? 2 : 1;
 }
-- (NSInteger)tableView:(UITableView *)tableView
-    numberOfRowsInSection:(NSInteger)section {
-  if (section == 0)
-    return 1;
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+  if (section == 0) return 1;
   return self.proxy ? self.customProxy ? 3 : 2 : 1;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView
          cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   UITableViewCell *cell;
   switch (indexPath.section) {
-  case 0:
-    cell = [[NSClassFromString(@"_TtC6Twitch27SettingsSwitchTableViewCell")
-        alloc] initWithStyle:UITableViewCellStyleDefault
-             reuseIdentifier:@"AdBlockSwitchCell"];
-    [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
-             configureWithTitle:@"Ad Block"
-                       subtitle:nil
-                      isEnabled:YES
-                           isOn:[[NSUserDefaults standardUserDefaults]
-                                    boolForKey:@"TWAdBlockEnabled"]
-        accessibilityIdentifier:@"AdBlockSwitchCell"];
-    [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
-    break;
-  case 1:
-    switch (indexPath.row) {
     case 0:
-      cell = [[NSClassFromString(@"_TtC6Twitch27SettingsSwitchTableViewCell")
-          alloc] initWithStyle:UITableViewCellStyleDefault
-               reuseIdentifier:@"AdBlockProxySwitchCell"];
+      cell = [[NSClassFromString(@"_TtC6Twitch27SettingsSwitchTableViewCell") alloc]
+            initWithStyle:UITableViewCellStyleDefault
+          reuseIdentifier:@"AdBlockSwitchCell"];
       [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
-               configureWithTitle:@"Ad Block Proxy"
+               configureWithTitle:@"Ad Block"
                          subtitle:nil
                         isEnabled:YES
                              isOn:[[NSUserDefaults standardUserDefaults]
-                                      boolForKey:@"TWAdBlockProxyEnabled"]
-          accessibilityIdentifier:@"AdBlockProxySwitchCell"];
+                                      boolForKey:@"TWAdBlockEnabled"]
+          accessibilityIdentifier:@"AdBlockSwitchCell"];
       [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
       break;
     case 1:
-      cell = [[NSClassFromString(@"_TtC6Twitch27SettingsSwitchTableViewCell")
-          alloc] initWithStyle:UITableViewCellStyleDefault
-               reuseIdentifier:@"AdBlockCustomProxySwitchCell"];
-      [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
-               configureWithTitle:@"Custom Proxy"
-                         subtitle:nil
-                        isEnabled:YES
-                             isOn:[[NSUserDefaults standardUserDefaults]
-                                      boolForKey:@"TWAdBlockCustomProxyEnabled"]
-          accessibilityIdentifier:@"AdBlockCustomProxySwitchCell"];
-      [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
+      switch (indexPath.row) {
+        case 0:
+          cell = [[NSClassFromString(@"_TtC6Twitch27SettingsSwitchTableViewCell") alloc]
+                initWithStyle:UITableViewCellStyleDefault
+              reuseIdentifier:@"AdBlockProxySwitchCell"];
+          [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
+                   configureWithTitle:@"Ad Block Proxy"
+                             subtitle:nil
+                            isEnabled:YES
+                                 isOn:[[NSUserDefaults standardUserDefaults]
+                                          boolForKey:@"TWAdBlockProxyEnabled"]
+              accessibilityIdentifier:@"AdBlockProxySwitchCell"];
+          [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
+          break;
+        case 1:
+          cell = [[NSClassFromString(@"_TtC6Twitch27SettingsSwitchTableViewCell") alloc]
+                initWithStyle:UITableViewCellStyleDefault
+              reuseIdentifier:@"AdBlockCustomProxySwitchCell"];
+          [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
+                   configureWithTitle:@"Custom Proxy"
+                             subtitle:nil
+                            isEnabled:YES
+                                 isOn:[[NSUserDefaults standardUserDefaults]
+                                          boolForKey:@"TWAdBlockCustomProxyEnabled"]
+              accessibilityIdentifier:@"AdBlockCustomProxySwitchCell"];
+          [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
+          break;
+        case 2:
+          cell = [[NSClassFromString(@"TWAdBlockProxyTextFieldTableViewCell") alloc]
+                initWithStyle:tableView.style
+              reuseIdentifier:@"TWAdBlockProxy"];
+          break;
+      }
       break;
-    case 2:
-      cell = [[NSClassFromString(@"TWAdBlockProxyTextFieldTableViewCell") alloc]
-            initWithStyle:tableView.style
-          reuseIdentifier:@"TWAdBlockProxy"];
-      break;
-    }
-    break;
   }
   return cell;
 }
 %new
-- (NSString *)tableView:(UITableView *)tableView
-    titleForFooterInSection:(NSInteger)section {
-  if (section == 0)
-    return @"Choose whether you want to block ads or not.";
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+  if (section == 0) return @"Choose whether you want to block ads or not.";
   return [NSString
-      stringWithFormat:
-          @"Proxy HLS manifest requests through an external server%@. Only "
-          @"works if server side ads are enabled.%@",
-          self.customProxy ? @" specified by the URL above" : @"",
-          self.customProxy
-              ? @"\n\n:channel = Channel name (VOD id for VODs) \n:path = Full "
-                @"path + query\n:playlist = :channel.m3u8 + query"
-              : @""];
+      stringWithFormat:@"Proxy HLS manifest requests through an external server%@. Only "
+                       @"works if server side ads are enabled.%@",
+                       self.customProxy ? @" specified by the URL above" : @"",
+                       self.customProxy
+                           ? @"\n\n:channel = Channel name (VOD id for VODs) \n:path = Full "
+                             @"path + query\n:playlist = :channel.m3u8 + query"
+                           : @""];
 }
-- (instancetype)initWithTableViewStyle:(NSInteger)tableViewStyle
-                          themeManager:(id)themeManager {
+- (instancetype)initWithTableViewStyle:(NSInteger)tableViewStyle themeManager:(id)themeManager {
   if ((self = %orig)) {
     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
     self.adblock = [userDefaults boolForKey:@"TWAdBlockEnabled"];
@@ -171,31 +159,26 @@
 %end
 
 %hook _TtC6Twitch25AppSettingsViewController
-- (void)tableView:(UITableView *)tableView
-    didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-  if (indexPath.row ==
-      [self tableView:tableView numberOfRowsInSection:indexPath.section] - 1) {
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+  if (indexPath.row == [self tableView:tableView numberOfRowsInSection:indexPath.section] - 1) {
     [self.navigationController
         pushViewController:
             [[NSClassFromString(@"TwitchAdBlockSettingsViewController") alloc]
                 initWithTableViewStyle:2
-                          themeManager:
-                              [NSClassFromString(
-                                  @"_TtC12TwitchCoreUI21TWDefaultThemeManager")
-                                  defaultThemeManager]]
+                          themeManager:[NSClassFromString(
+                                           @"_TtC12TwitchCoreUI21TWDefaultThemeManager")
+                                           defaultThemeManager]]
                   animated:YES];
     return;
   }
   %orig;
 }
-- (NSInteger)tableView:(UITableView *)tableView
-    numberOfRowsInSection:(NSInteger)section {
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
   return %orig + 1;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView
          cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-  if (indexPath.row ==
-      [self tableView:tableView numberOfRowsInSection:indexPath.section] - 1) {
+  if (indexPath.row == [self tableView:tableView numberOfRowsInSection:indexPath.section] - 1) {
     _TtC6Twitch22SettingsDisclosureCell *cell =
         [[NSClassFromString(@"_TtC6Twitch22SettingsDisclosureCell") alloc]
               initWithStyle:3
@@ -214,8 +197,7 @@
   %orig;
   MSHookIvar<BOOL>(self, "isEditing") = YES;
   self.backgroundColor = self.lastConfiguredTheme.backgroundBodyColor;
-  self.layer.borderColor =
-      self.lastConfiguredTheme.backgroundAccentColor.CGColor;
+  self.layer.borderColor = self.lastConfiguredTheme.backgroundAccentColor.CGColor;
   self.layer.borderWidth = 2;
 }
 - (void)textFieldDidEndEditing:(UITextField *)textField {
@@ -223,12 +205,54 @@
   MSHookIvar<BOOL>(self, "isEditing") = NO;
   self.backgroundColor = self.lastConfiguredTheme.backgroundInputColor;
   self.layer.borderWidth = 0;
-  [[NSUserDefaults standardUserDefaults] setValue:textField.text
-                                           forKey:@"TWAdBlockProxy"];
+  [[NSUserDefaults standardUserDefaults] setValue:textField.text forKey:@"TWAdBlockProxy"];
 }
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
   [textField resignFirstResponder];
   return YES;
+}
+- (instancetype)initWithFrame:(CGRect)frame
+                 themeManager:(_TtC12TwitchCoreUI21TWDefaultThemeManager *)themeManager {
+  MSHookIvar<int>(self, "maximumLength") = INT_MAX;
+  Class originalClass = object_setClass(self, UIView.class);
+  if ((self = [self initWithFrame:frame])) {
+    object_setClass(self, originalClass);
+    self.themeManager = themeManager;
+    self.applyShadowPathForElevation = YES;
+    MSHookIvar<UITextField *>(self, "textField") =
+        [[NSClassFromString(@"_TtC12TwitchCoreUI13BaseTextField") alloc] init];
+    UITextField *textField = MSHookIvar<UITextField *>(self, "textField");
+    textField.borderStyle = UITextBorderStyleNone;
+    textField.spellCheckingType = UITextSpellCheckingTypeNo;
+    textField.returnKeyType = UIReturnKeyGo;
+    textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    textField.font = UIFont.twitchBody;
+    textField.enablesReturnKeyAutomatically = YES;
+    textField.translatesAutoresizingMaskIntoConstraints = NO;
+    textField.delegate = self;
+    [textField addTarget:self
+                  action:@selector(textFieldEditingChanged)
+        forControlEvents:UIControlEventEditingChanged];
+    [self addSubview:textField];
+    CGFloat inputPadding = textField.intrinsicContentSize.width * 2;
+    MSHookIvar<CGFloat>(self, "inputPadding") = inputPadding;
+    NSArray<NSLayoutConstraint *> *textFieldConstraints = @[
+      [self.leftAnchor constraintEqualToAnchor:textField.leftAnchor constant:-inputPadding],
+      [self.rightAnchor constraintEqualToAnchor:textField.rightAnchor constant:inputPadding],
+      [self.topAnchor constraintEqualToAnchor:textField.topAnchor],
+      [self.bottomAnchor constraintEqualToAnchor:textField.bottomAnchor],
+    ];
+    [NSLayoutConstraint deactivateConstraints:MSHookIvar<NSArray<NSLayoutConstraint *> *>(
+                                                  self, "_textFieldConstraints")];
+    MSHookIvar<NSArray<NSLayoutConstraint *> *>(self, "_textFieldConstraints") =
+        textFieldConstraints;
+    [NSLayoutConstraint activateConstraints:textFieldConstraints];
+  }
+  return self;
+}
+- (void)dealloc {
+  object_setClass(self, UIView.class);
+  %orig;
 }
 %end
 
@@ -236,19 +260,16 @@
 %subclass TWAdBlockProxyTextFieldTableViewCell : TWBaseTableViewCell
 %property(nonatomic, strong) TWAdBlockProxyTextField *proxyTextField;
 // clang-format on
-- (id)initWithStyle:(UITableViewCellStyle)style
-    reuseIdentifier:(NSString *)reuseIdentifier {
+- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
   if ((self = %orig)) {
     self.proxyTextField = [[NSClassFromString(@"TWAdBlockProxyTextField") alloc]
         initWithFrame:self.frame
-         themeManager:[NSClassFromString(
-                          @"_TtC12TwitchCoreUI21TWDefaultThemeManager")
+         themeManager:[NSClassFromString(@"_TtC12TwitchCoreUI21TWDefaultThemeManager")
                           defaultThemeManager]];
-    UITextField *textField = self.proxyTextField.subviews[0];
+    UITextField *textField = MSHookIvar<UITextField *>(self.proxyTextField, "textField");
     textField.returnKeyType = UIReturnKeyDone;
     textField.placeholder = PROXY_URL;
-    textField.text =
-        [[NSUserDefaults standardUserDefaults] objectForKey:@"TWAdBlockProxy"];
+    textField.text = [[NSUserDefaults standardUserDefaults] objectForKey:@"TWAdBlockProxy"];
     [self addSubview:self.proxyTextField];
   }
   return self;

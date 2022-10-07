@@ -5,8 +5,7 @@
 %hook _TtC6Twitch19TheaterAdController
 - (void)theaterWasPresented:(NSNotification *)notification {
   %orig;
-  if (![[NSUserDefaults standardUserDefaults] boolForKey:@"TWAdBlockEnabled"])
-    return;
+  if (![[NSUserDefaults standardUserDefaults] boolForKey:@"TWAdBlockEnabled"]) return;
   const char *ivars[] = {
       "displayAdController",
       "videoAdController",
@@ -18,9 +17,11 @@
 }
 %end
 
-static NSURL *proxyURLForURL(NSURL *url) {
-  if (![url.host isEqualToString:@"usher.ttvnw.net"])
-    return url;
+%hook TWHLSResource
+- (NSURL *)URLWithAllowAudioOnly:(BOOL)allowAudioOnly
+                     allowSource:(BOOL)allowSource
+                     maxAVCLevel:(NSString *)maxAVCLevel {
+  NSURL *url = %orig;
 
   NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
 
@@ -28,17 +29,14 @@ static NSURL *proxyURLForURL(NSURL *url) {
       ![userDefaults boolForKey:@"TWAdBlockProxyEnabled"])
     return url;
 
-  NSURL *proxy =
-      [userDefaults boolForKey:@"TWAdBlockCustomProxyEnabled"]
-          ? [NSURL URLWithString:[userDefaults objectForKey:@"TWAdBlockProxy"]]
-          : [NSURL URLWithString:PROXY_URL];
+  NSURL *proxy = [userDefaults boolForKey:@"TWAdBlockCustomProxyEnabled"]
+                     ? [NSURL URLWithString:[userDefaults objectForKey:@"TWAdBlockProxy"]]
+                     : [NSURL URLWithString:PROXY_URL];
 
   // Get token dictionary
-  NSURLComponents *components = [NSURLComponents componentsWithURL:url
-                                           resolvingAgainstBaseURL:YES];
+  NSURLComponents *components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:YES];
   NSUInteger tokenQueryItemIdx = [components.queryItems
-      indexOfObjectPassingTest:^(NSURLQueryItem *queryItem, NSUInteger idx,
-                                 BOOL *stop) {
+      indexOfObjectPassingTest:^(NSURLQueryItem *queryItem, NSUInteger idx, BOOL *stop) {
         if ([queryItem.name isEqualToString:@"token"]) {
           *stop = YES;
           return YES;
@@ -49,8 +47,7 @@ static NSURL *proxyURLForURL(NSURL *url) {
   if (tokenQueryItemIdx != NSNotFound) {
     NSURLQueryItem *tokenQueryItem = components.queryItems[tokenQueryItemIdx];
     tokenDictionary = [NSJSONSerialization
-        JSONObjectWithData:[tokenQueryItem.value
-                               dataUsingEncoding:NSUTF8StringEncoding]
+        JSONObjectWithData:[tokenQueryItem.value dataUsingEncoding:NSUTF8StringEncoding]
                    options:0
                      error:nil];
   }
@@ -63,65 +60,24 @@ static NSURL *proxyURLForURL(NSURL *url) {
       ![tokenDictionary[@"server_ads"] boolValue])
     return url;
 
-  if (!proxy || ![proxy.scheme hasPrefix:@"http"] || !proxy.host)
-    return url;
+  if (!proxy || ![proxy.scheme hasPrefix:@"http"] || !proxy.host) return url;
 
   // Substitute
-  NSString *channel = tokenDictionary
-                          ? tokenDictionary[@"channel"]
-                          : [url.path stringByDeletingPathExtension];
-  NSString *path = [[NSString stringWithFormat:@"%@?%@", url.path, url.query]
-      substringFromIndex:1];
-  NSString *playlist =
-      [NSString stringWithFormat:@"%@?%@", url.lastPathComponent, url.query];
+  NSString *channel =
+      tokenDictionary ? tokenDictionary[@"channel"] : [url.path stringByDeletingPathExtension];
+  NSString *path = [[NSString stringWithFormat:@"%@?%@", url.path, url.query] substringFromIndex:1];
+  NSString *playlist = [NSString stringWithFormat:@"%@?%@", url.lastPathComponent, url.query];
   NSDictionary *substitutes = @{
     @"channel" : channel,
     @"path" : path,
     @"playlist" : playlist,
   };
   for (NSString *key in substitutes.allKeys)
-    proxy =
-        [NSURL URLWithString:
-                   [proxy.absoluteString
-                       stringByReplacingOccurrencesOfString:
-                           [@":" stringByAppendingString:key]
-                                                 withString:substitutes[key]]];
+    proxy = [NSURL
+        URLWithString:[proxy.absoluteString
+                          stringByReplacingOccurrencesOfString:[@":" stringByAppendingString:key]
+                                                    withString:substitutes[key]]];
 
   return proxy;
-}
-
-%hook TWHLSResource
-- (NSURL *)URLWithAllowAudioOnly:(BOOL)allowAudioOnly
-                     allowSource:(BOOL)allowSource
-                     maxAVCLevel:(NSString *)maxAVCLevel {
-  NSURL *url = %orig;
-  return proxyURLForURL(url);
-}
-%end
-
-%hook _TtC6Twitch18LiveHLSURLProvider
-- (NSURL *)manifestURLWithToken:(NSString *)token
-                tokenDictionary:(NSDictionary *)tokenDictionary
-                      signature:(NSString *)signature {
-  NSURL *url = %orig;
-  return proxyURLForURL(url);
-}
-%end
-
-%hook TWVODHLSProvider
-- (NSURL *)manifestURLWithToken:(NSString *)token
-                tokenDictionary:(NSDictionary *)tokenDictionary
-                      signature:(NSString *)signature {
-  NSURL *url = %orig;
-  return proxyURLForURL(url);
-}
-%end
-
-%hook TWHLSProvider
-- (NSURL *)manifestURLWithToken:(NSString *)token
-                tokenDictionary:(NSDictionary *)tokenDictionary
-                      signature:(NSString *)signature {
-  NSURL *url = %orig;
-  return proxyURLForURL(url);
 }
 %end
