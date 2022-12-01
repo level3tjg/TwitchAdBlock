@@ -17,6 +17,26 @@
 }
 %end
 
+%hook NSURLSession
+- (instancetype)dataTaskWithRequest:(NSURLRequest *)request {
+  if ([request.URL.host isEqualToString:@"gql.twitch.tv"]) {
+    NSDictionary *operation = [NSJSONSerialization JSONObjectWithData:request.HTTPBody
+                                                              options:NSJSONReadingMutableContainers
+                                                                error:nil];
+    if (![operation isKindOfClass:NSDictionary.class] ||
+        ![operation[@"operationName"] isEqualToString:@"StreamAccessToken"])
+      return %orig;
+    NSMutableURLRequest *mutableRequest = request.mutableCopy;
+    operation[@"variables"][@"params"][@"platform"] = @"android";
+    mutableRequest.HTTPBody = [NSJSONSerialization dataWithJSONObject:operation
+                                                              options:0
+                                                                error:nil];
+    request = mutableRequest.copy;
+  }
+  return %orig;
+}
+%end
+
 %hook TWHLSResource
 - (NSURL *)URLWithAllowAudioOnly:(BOOL)allowAudioOnly
                      allowSource:(BOOL)allowSource
