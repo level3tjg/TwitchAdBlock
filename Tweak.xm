@@ -19,7 +19,8 @@
 
 %hook NSURLSession
 - (instancetype)dataTaskWithRequest:(NSURLRequest *)request {
-  if ([request.URL.host isEqualToString:@"gql.twitch.tv"]) {
+  if ([NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockPlatformRandomizationEnabled"] &&
+      [request.URL.host isEqualToString:@"gql.twitch.tv"]) {
     NSDictionary *operation = [NSJSONSerialization JSONObjectWithData:request.HTTPBody
                                                               options:NSJSONReadingMutableContainers
                                                                 error:nil];
@@ -27,7 +28,10 @@
         ![operation[@"operationName"] isEqualToString:@"StreamAccessToken"])
       return %orig;
     NSMutableURLRequest *mutableRequest = request.mutableCopy;
-    operation[@"variables"][@"params"][@"platform"] = @"android";
+    uint32_t platformLength = 0;
+    while (platformLength < 3) platformLength = arc4random_uniform(8);
+    operation[@"variables"][@"params"][@"platform"] =
+        [[NSUUID UUID].UUIDString substringWithRange:NSMakeRange(0, platformLength)];
     mutableRequest.HTTPBody = [NSJSONSerialization dataWithJSONObject:operation
                                                               options:0
                                                                 error:nil];

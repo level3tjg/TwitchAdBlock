@@ -288,7 +288,11 @@
   if (![userDefaults objectForKey:@"TWAdBlockProxy"])
     [userDefaults setObject:PROXY_URL forKey:@"TWAdBlockProxy"];
   if (![userDefaults objectForKey:@"TWAdBlockProxyEnabled"])
-    [userDefaults setBool:YES forKey:@"TWAdBlockProxyEnabled"];
+    [userDefaults setBool:NO forKey:@"TWAdBlockProxyEnabled"];
   if (![userDefaults objectForKey:@"TWAdBlockCustomProxyEnabled"])
     [userDefaults setBool:NO forKey:@"TWAdBlockCustomProxyEnabled"];
+  if (![userDefaults objectForKey:@"TWAdBlockPlatformRandomizationEnabled"]) {
+    [userDefaults setBool:YES forKey:@"TWAdBlockPlatformRandomizationEnabled"];
+    [userDefaults setBool:NO forKey:@"TWAdBlockProxyEnabled"];
+  }
 }
