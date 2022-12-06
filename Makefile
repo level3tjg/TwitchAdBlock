@@ -14,7 +14,7 @@ TWEAK_NAME = TwitchAdBlock
 $(TWEAK_NAME)_FILES = $(wildcard *.m) $(wildcard *.xm)
 $(TWEAK_NAME)_CFLAGS = -fobjc-arc
 ifeq ($(SIDELOADED),1)
-$(TWEAK_NAME)_FILES += Sideloaded.x
+$(TWEAK_NAME)_FILES += Sideloaded.x fishhook/fishhook.c
 $(TWEAK_NAME)_IPA = Twitch.ipa
 CODESIGN_IPA = 0
 endif

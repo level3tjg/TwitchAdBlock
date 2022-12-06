@@ -20,7 +20,7 @@
 %hook NSURLSession
 - (instancetype)dataTaskWithRequest:(NSURLRequest *)request {
   if ([NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockPlatformRandomizationEnabled"] &&
-      [request.URL.host isEqualToString:@"gql.twitch.tv"]) {
+      [request.URL.host isEqualToString:@"gql.twitch.tv"] && request.HTTPBody) {
     NSDictionary *operation = [NSJSONSerialization JSONObjectWithData:request.HTTPBody
                                                               options:NSJSONReadingMutableContainers
                                                                 error:nil];
