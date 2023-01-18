@@ -2,6 +2,19 @@
 
 #define PROXY_URL @"https://proxy.level3tjg.me/:path"
 
+@interface TWHLSProvider : NSObject
+- (void)requestManifest;
+@end
+
+@interface _TtC6Twitch18LiveHLSURLProvider : TWHLSProvider
+@end
+
+@interface IVSPlayer : NSObject
+@property(nonatomic, copy) NSURL *path;
+@end
+
+NSMutableDictionary<NSString *, TWHLSProvider *> *providers;
+
 %hook _TtC6Twitch19TheaterAdController
 - (void)theaterWasPresented:(NSNotification *)notification {
   %orig;
@@ -19,7 +32,8 @@
 
 %hook NSURLSession
 - (instancetype)dataTaskWithRequest:(NSURLRequest *)request {
-  if ([NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockPlatformRandomizationEnabled"] &&
+  if ([NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] &&
+      [NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockPlatformRandomizationEnabled"] &&
       [request.URL.host isEqualToString:@"gql.twitch.tv"] && request.HTTPBody) {
     NSDictionary *operation = [NSJSONSerialization JSONObjectWithData:request.HTTPBody
                                                               options:NSJSONReadingMutableContainers
@@ -38,6 +52,31 @@
     request = mutableRequest.copy;
   }
   return %orig;
+}
+%end
+
+%hook _TtC6Twitch18LiveHLSURLProvider
+- (NSURL *)manifestURLWithToken:(NSString *)token
+                tokenDictionary:(NSDictionary *)tokenDictionary
+                      signature:(NSString *)signature {
+  NSURL *manifestURL = %orig;
+  providers[manifestURL.path] = self;
+  return manifestURL;
+}
+%end
+
+%hook _TtC6Twitch21PlayerCoreVideoPlayer
+- (void)player:(IVSPlayer *)player
+    didOutputMetadataWithType:(NSString *)type
+                      content:(NSData *)content {
+  %orig;
+  if ([NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] &&
+      [NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockPlatformRandomizationEnabled"] &&
+      [[[NSString alloc] initWithData:content
+                             encoding:NSUTF8StringEncoding] containsString:@"stitched-ad"]) {
+    TWHLSProvider *provider = providers[player.path.path];
+    if (provider) [provider requestManifest];
+  }
 }
 %end
 
@@ -105,3 +144,7 @@
   return proxy;
 }
 %end
+
+%ctor {
+  providers = [NSMutableDictionary dictionary];
+}
