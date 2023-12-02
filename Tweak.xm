@@ -1,5 +1,23 @@
 #import "Tweak.h"
 
+%hook _TtC6Twitch23FollowingViewController
+- (instancetype)initWithGraphQL:(_TtC9TwitchKit9TKGraphQL *)graphQL themeManager:(_TtC12TwitchCoreUI21TWDefaultThemeManager *)themeManager {
+  if ((self = %orig)) {
+    MSHookIvar<id>(MSHookIvar<id>(self, "headlinerManager"), "displayAdStateManager") = NULL;
+  }
+  return self;
+}
+%end
+
+%hook _TtC6Twitch27HeadlinerFollowingAdManager
++ (instancetype)shared {
+  id shared = %orig;
+  if (shared)
+    MSHookIvar<id>(shared, "displayAdStateManager") = NULL;
+  return shared;
+}
+%end
+
 %hook _TtC6Twitch19TheaterAdController
 - (void)theaterWasPresented:(NSNotification *)notification {
   %orig;

@@ -1,6 +1,7 @@
-#import <Foundation/Foundation.h>
+#import "Header.h"
 
-#define PROXY_URL @"https://proxy.level3tjg.me/:path"
+@interface _TtC9TwitchKit9TKGraphQL : NSObject
+@end
 
 @interface TWAnalyticsController : NSObject
 + (instancetype)analyticsController;
