@@ -2,7 +2,7 @@ ifeq ($(SIDELOADED),1)
 MODULES = jailed
 endif
 
-PACKAGE_VERSION = 0.1.0-1
+PACKAGE_VERSION = 0.1.0-2
 
 TARGET := iphone:clang:14.5:12.0
 INSTALL_TARGET_PROCESSES = Twitch

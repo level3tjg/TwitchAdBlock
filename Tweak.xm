@@ -12,7 +12,7 @@
 %hook _TtC6Twitch27HeadlinerFollowingAdManager
 + (instancetype)shared {
   id shared = %orig;
-  if (shared && class_getInstanceVariable(self, "headlinerManager"))
+  if (shared && class_getInstanceVariable(shared.class, "displayAdStateManager"))
     MSHookIvar<id>(shared, "displayAdStateManager") = NULL;
   return shared;
 }
