@@ -45,17 +45,29 @@ static void handle_URLSession_dataTask_didReceieveData(
                    options:NSJSONReadingMutableContainers
                      error:&error];
     if (error) return orig(self, _cmd, session, dataTask, data);
+    NSString *hash = @"28fd67532c7e6e3cd78d03caf98f3acc0eda738049003b57d4dd8e529c89a9c3";
+    if (dataTask.originalRequest.HTTPBody) {
+      NSDictionary *requestJson = [NSJSONSerialization
+          JSONObjectWithData:dataTask.originalRequest.HTTPBody
+                    options:NSJSONReadingMutableContainers
+                      error:&error];
+      if (!error) {
+        NSString *newHash = requestJson[@"extensions"][@"persistedQuery"][@"sha256Hash"];
+        if (newHash)
+          hash = newHash;
+      }
+    }
     NSString *channelName = tokenDictionary[@"channel"];
     uint32_t platformLength = 0;
     while (platformLength < 3) platformLength = arc4random_uniform(8);
     NSDictionary *body = @{
       @"extensions" : @{
         @"persistedQuery" : @{
-          @"sha256Hash" : @"28fd67532c7e6e3cd78d03caf98f3acc0eda738049003b57d4dd8e529c89a9c3",
+          @"sha256Hash" : hash,
           @"version" : @1,
         }
       },
-      @"id" : @"28fd67532c7e6e3cd78d03caf98f3acc0eda738049003b57d4dd8e529c89a9c3",
+      @"id" : hash,
       @"operationName" : @"StreamAccessToken",
       @"variables" : @{
         @"channelName" : channelName,
