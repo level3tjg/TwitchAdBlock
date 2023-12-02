@@ -3,6 +3,24 @@
 @interface _TtC9TwitchKit9TKGraphQL : NSObject
 @end
 
+@interface _TtC6Twitch27HeadlinerFollowingAdManager : NSObject
+@end
+
+@interface TWThemeableViewController : UIViewController
+@end
+
+@interface TWBaseViewController : TWThemeableViewController
+@end
+
+@interface TWBaseInfiniteScrollingViewController : TWBaseViewController
+@end
+
+@interface TWBaseCollectionViewController : TWBaseInfiniteScrollingViewController
+@end
+
+@interface _TtC6Twitch23FollowingViewController : TWBaseCollectionViewController
+@end
+
 @interface TWAnalyticsController : NSObject
 + (instancetype)analyticsController;
 @end

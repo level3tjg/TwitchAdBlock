@@ -2,8 +2,8 @@
 
 %hook _TtC6Twitch23FollowingViewController
 - (instancetype)initWithGraphQL:(_TtC9TwitchKit9TKGraphQL *)graphQL themeManager:(_TtC12TwitchCoreUI21TWDefaultThemeManager *)themeManager {
-  if ((self = %orig)) {
-    MSHookIvar<id>(MSHookIvar<id>(self, "headlinerManager"), "displayAdStateManager") = NULL;
+  if ((self = %orig) && class_getInstanceVariable(self.class, "headlinerManager")) {
+      MSHookIvar<id>(MSHookIvar<id>(self, "headlinerManager"), "displayAdStateManager") = NULL;
   }
   return self;
 }
@@ -12,7 +12,7 @@
 %hook _TtC6Twitch27HeadlinerFollowingAdManager
 + (instancetype)shared {
   id shared = %orig;
-  if (shared)
+  if (shared && class_getInstanceVariable(self, "headlinerManager"))
     MSHookIvar<id>(shared, "displayAdStateManager") = NULL;
   return shared;
 }
