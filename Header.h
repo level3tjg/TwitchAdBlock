@@ -1,7 +1,4 @@
 #import <UIKit/UIKit.h>
+#import <TwitchCoreUI/TWDefaultThemeManager.h>
 
-#define PROXY_URL @"https://proxy.level3tjg.me/:path"
-
-@interface _TtC12TwitchCoreUI21TWDefaultThemeManager : NSObject
-+ (instancetype)defaultThemeManager;
-@end
+#define PROXY_URL @"firefox.api.cdn-perfprod.com:2023"

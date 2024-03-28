@@ -1,3 +1,6 @@
 [submodule "fishhook"]
 	path = fishhook
 	url = https://github.com/facebook/fishhook
+[submodule "TwitchLoginFix"]
+	path = TwitchLoginFix
+	url = https://github.com/level3tjg/TwitchLoginFix
