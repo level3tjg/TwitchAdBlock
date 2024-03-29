@@ -81,7 +81,7 @@
           return cell;
         case 2:
           cell = [[objc_getClass("TWAdBlockSettingsTextFieldTableViewCell") alloc]
-                initWithStyle:tableView.style
+                initWithStyle:UITableViewCellStyleDefault
               reuseIdentifier:@"TWAdBlockProxy"];
           TWAdBlockSettingsTextField *textField = ((TWAdBlockSettingsTextFieldTableViewCell *)cell).textField;
           textField.textField.placeholder = PROXY_URL;
