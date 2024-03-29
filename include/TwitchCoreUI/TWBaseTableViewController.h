@@ -1,3 +1,6 @@
+#import <TwitchCoreUI/TWDefaultThemeManager.h>
+#import <UIKit/UIKit.h>
+
 @interface TWBaseTableViewController
     : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property UITableView *tableView;

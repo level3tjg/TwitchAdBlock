@@ -14,7 +14,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = TwitchAdBlock
 
 $(TWEAK_NAME)_FILES = $(wildcard *.*m)
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Iinclude
+$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Iinclude -DPROXY_URL=@\"firefox.api.cdn-perfprod.com:2023\"
 ifeq ($(SIDELOADED),1)
   $(TWEAK_NAME)_FILES += Sideloaded.x fishhook/fishhook.c
   CODESIGN_IPA = 0
