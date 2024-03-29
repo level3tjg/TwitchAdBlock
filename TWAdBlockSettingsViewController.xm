@@ -158,7 +158,7 @@ static NSBundle *twAdBlockBundle;
 %end
 
 %ctor {
-  twAdBlockBundle = [NSBundle bundleWithPath:[NSBundle.mainBundle pathForResource:@"TwtichAdBlock"
+  twAdBlockBundle = [NSBundle bundleWithPath:[NSBundle.mainBundle pathForResource:@"TwitchAdBlock"
                                                                            ofType:@"bundle"]];
   if (!twAdBlockBundle)
     twAdBlockBundle = [NSBundle bundleWithPath:@THEOS_PACKAGE_INSTALL_PREFIX
