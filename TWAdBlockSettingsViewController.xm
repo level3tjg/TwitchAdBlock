@@ -1,5 +1,9 @@
 #import "TWAdBlockSettingsViewController.h"
 
+static NSBundle *twAdBlockBundle;
+
+#define LOC(x, d) [twAdBlockBundle localizedStringForKey:x value:d table:nil]
+
 %subclass TWAdBlockSettingsViewController : TWBaseTableViewController
 %property(nonatomic, assign) BOOL adblock;
 %property(nonatomic, assign) BOOL proxy;
@@ -43,7 +47,7 @@
             initWithStyle:UITableViewCellStyleDefault
           reuseIdentifier:@"AdBlockSwitchCell"];
       [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
-               configureWithTitle:@"Ad Block"
+               configureWithTitle:LOC(@"settings.adblock.title", @"Ad Block")
                          subtitle:nil
                         isEnabled:YES
                              isOn:[NSUserDefaults.standardUserDefaults
@@ -58,7 +62,7 @@
                 initWithStyle:UITableViewCellStyleDefault
               reuseIdentifier:@"AdBlockProxySwitchCell"];
           [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
-                   configureWithTitle:@"Ad Block Proxy"
+                   configureWithTitle:LOC(@"settings.proxy.title", @"Ad Block Proxy")
                              subtitle:nil
                             isEnabled:YES
                                  isOn:[NSUserDefaults.standardUserDefaults
@@ -71,7 +75,7 @@
                 initWithStyle:UITableViewCellStyleDefault
               reuseIdentifier:@"AdBlockCustomProxySwitchCell"];
           [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell
-                   configureWithTitle:@"Custom Proxy"
+                   configureWithTitle:LOC(@"settings.custom_proxy.title", @"Custom Proxy")
                              subtitle:nil
                             isEnabled:YES
                                  isOn:[NSUserDefaults.standardUserDefaults
@@ -83,9 +87,11 @@
           cell = [[objc_getClass("TWAdBlockSettingsTextFieldTableViewCell") alloc]
                 initWithStyle:UITableViewCellStyleDefault
               reuseIdentifier:@"TWAdBlockProxy"];
-          TWAdBlockSettingsTextField *textField = ((TWAdBlockSettingsTextFieldTableViewCell *)cell).textField;
+          TWAdBlockSettingsTextField *textField =
+              ((TWAdBlockSettingsTextFieldTableViewCell *)cell).textField;
           textField.textField.placeholder = PROXY_URL;
-          textField.textField.text = [NSUserDefaults.standardUserDefaults stringForKey:@"TWAdBlockProxy"];
+          textField.textField.text =
+              [NSUserDefaults.standardUserDefaults stringForKey:@"TWAdBlockProxy"];
           textField.delegate = self;
           return cell;
       }
@@ -97,9 +103,10 @@
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
   switch (section) {
     case 0:
-      return @"Choose whether you want to block ads or not.";
+      return LOC(@"settings.adblock.footer", @"Choose whether or not you want to block ads");
     case 1:
-      return @"Proxy specific requests through a proxy server based in an ad-free country";
+      return LOC(@"settings.proxy.footer",
+                 @"Proxy specific requests through a proxy server based in an ad-free country");
     default:
       return nil;
   }
@@ -149,3 +156,11 @@
   [NSUserDefaults.standardUserDefaults setValue:textField.text forKey:@"TWAdBlockProxy"];
 }
 %end
+
+%ctor {
+  twAdBlockBundle = [NSBundle bundleWithPath:[NSBundle.mainBundle pathForResource:@"TwtichAdBlock"
+                                                                           ofType:@"bundle"]];
+  if (!twAdBlockBundle)
+    twAdBlockBundle = [NSBundle bundleWithPath:@THEOS_PACKAGE_INSTALL_PREFIX
+                                @"/Library/Application Support/TwitchAdBlock.bundle"];
+}
