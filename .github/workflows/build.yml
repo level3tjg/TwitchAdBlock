@@ -31,6 +31,7 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
+        if: ${{ inputs.create_release }}
         run: |
           sudo apt update
           sudo apt install -y build-essential checkinstall git autoconf automake libtool-bin rsync llvm xmlstarlet
@@ -41,6 +42,7 @@ jobs:
           sudo ldconfig
 
       - name: Download IPA
+        if: ${{ inputs.create_release }}
         id: download_ipa
         uses: level3tjg/decryptedappstore-action@main
         with:
@@ -57,6 +59,7 @@ jobs:
           cache-dir-sdks: ${{ github.workspace }}/theos/sdks
 
       - name: Checkout theos-jailed
+        if: ${{ inputs.create_release }}
         uses: actions/checkout@v4
         with:
           repository: level3tjg/theos-jailed
@@ -64,6 +67,7 @@ jobs:
           submodules: recursive
 
       - name: Install theos-jailed
+        if: ${{ inputs.create_release }}
         run: |
           ./theos-jailed/install
           cd libplist*
@@ -85,6 +89,7 @@ jobs:
           FINALPACKAGE: 1
 
       - name: Build IPA
+        if: ${{ inputs.create_release }}
         run: |
           cd TwitchAdBlock
           make package
