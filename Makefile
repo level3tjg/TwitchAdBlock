@@ -2,7 +2,7 @@ ifeq ($(SIDELOADED),1)
 MODULES = jailed
 endif
 
-PACKAGE_VERSION = 0.1.0-2
+PACKAGE_VERSION = 0.1.1
 ifdef APP_VERSION
   PACKAGE_VERSION := $(APP_VERSION)-$(PACKAGE_VERSION)
 endif
@@ -21,7 +21,7 @@ $(TWEAK_NAME)_CFLAGS = -fobjc-arc -Iinclude -DPROXY_URL=@\"firefox.api.cdn-perfp
 ifeq ($(SIDELOADED),1)
   $(TWEAK_NAME)_FILES += Sideloaded.x fishhook/fishhook.c
   CODESIGN_IPA = 0
-  ifeq ($(LEGACY),1) # 12.8.1
+  ifeq ($(LEGACY),1)
     $(TWEAK_NAME)_INJECT_DYLIBS = $(THEOS_OBJ_DIR)/TwitchLoginFix.dylib
     SUBPROJECTS += TwitchLoginFix
     include $(THEOS_MAKE_PATH)/aggregate.mk
