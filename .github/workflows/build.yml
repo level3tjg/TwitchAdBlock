@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: TwitchAdBlock
+          submodules: recursive
+
+      - name: Get package info
+        id: package_info
+        run: |
+          cd TwitchAdBlock
+          version=$(cat Makefile | grep "PACKAGE_VERSION =" | cut -d' ' -f3)
+          if [ -z $version ]; then
+            version=$(cat control | grep "Version:" | cut -d' ' -f2)
+          fi
+          echo "id=$(cat control | grep "Package:" | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential checkinstall git autoconf automake libtool-bin rsync llvm xmlstarlet
+          curl -L https://github.com/libimobiledevice/libplist/releases/download/2.4.0/libplist-2.4.0.tar.bz2 | bzip2 -d | tar -x
+          cd libplist*
+          ./configure
+          sudo make install
+          ldconfig
+
+      - name: Download IPA
+        id: download_ipa
+        uses: level3tjg/decryptedappstore-action@main
+        with:
+          appstore_url: "https://apps.apple.com/us/app/twitch-live-streaming/id460177396"
+          cache: true
+          path: ${{ github.workspace }}/App.ipa
+          token: ${{ secrets.DECRYPTEDAPPSTORE_SESSION_TOKEN }}
+
+      - name: Setup theos
+        uses: level3tjg/theos-action@main
+        with:
+          cache: true
+          cache-dir-theos: ${{ github.workspace }}/theos
+          cache-dir-sdks: ${{ github.workspace }}/theos/sdks
+
+      - name: Checkout theos-jailed
+        uses: actions/checkout@v4
+        with:
+          repository: level3tjg/theos-jailed
+          path: theos-jailed
+          submodules: recursive
+
+      - name: Install theos-jailed
+        run: |
+          ./theos-jailed/install
+          cd libplist*
+          sudo make uninstall
+
+      - name: Build rootless deb
+        run: |
+          cd TwitchAdBlock
+          make package
+        env:
+          FINALPACKAGE: 1
+          THEOS_PACKAGE_SCHEME: rootless
+
+      - name: Build rootful deb
+        run: |
+          cd TwitchAdBlock
+          make clean package
+        env:
+          FINALPACKAGE: 1
+
+      - name: Build IPA
+        run: |
+          cd TwitchAdBlock
+          make package
+        env:
+          FINALPACKAGE: 1
+          SIDELOADED: 1
+          IPA: ${{ github.workspace }}/App.ipa
+          APP_VERSION: ${{ steps.download_ipa.outputs.version }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.package_info.outputs.id }}_${{ steps.package_info.outputs.version }}
+          path: TwitchAdBlock/packages/*
