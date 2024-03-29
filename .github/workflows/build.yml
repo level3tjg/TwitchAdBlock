@@ -1,7 +1,13 @@
 name: CI
 
 on:
+  push:
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: "Create draft release"
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -88,8 +94,16 @@ jobs:
           IPA: ${{ github.workspace }}/App.ipa
           APP_VERSION: ${{ steps.download_ipa.outputs.version }}
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.package_info.outputs.id }}_${{ steps.package_info.outputs.version }}
           path: TwitchAdBlock/packages/*
+
+      - name: Create release
+        if: ${{ inputs.create_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: TwitchAdBlock/packages/*
+          tag_name: v${{ steps.download_ipa.outputs.version }}-${{ steps.package_info.outputs.version }}
