@@ -32,7 +32,7 @@ jobs:
           cd libplist*
           ./configure
           sudo make install
-          ldconfig
+          sudo ldconfig
 
       - name: Download IPA
         id: download_ipa
