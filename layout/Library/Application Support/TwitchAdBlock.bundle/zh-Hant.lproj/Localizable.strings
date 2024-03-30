@@ -1,0 +1,5 @@
+"settings.adblock.title"="阻擋廣告";
+"settings.adblock.footer"="選擇您是否要阻擋廣告";
+"settings.proxy.title"="廣告阻擋代理伺服器";
+"settings.proxy.footer"="將特定的請求透過位於無廣告國家/地區的伺服器進行代理";
+"settings.custom_proxy.title"="自訂代理伺服器";
