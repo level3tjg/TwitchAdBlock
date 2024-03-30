@@ -11,15 +11,22 @@
 
 %hook NSBundle
 
-- (NSDictionary*)infoDictionary {
-  NSDictionary* infoDictionary = %orig;
-  if ([self isEqual:NSBundle.mainBundle]) {
-    NSMutableDictionary* mutableInfoDictionary = infoDictionary.mutableCopy;
-    mutableInfoDictionary[@"CFBundleIdentifier"] = TW_BUNDLE_ID;
-    infoDictionary = mutableInfoDictionary.copy;
-  }
-  return infoDictionary;
+- (NSString *)bundleIdentifier {
+  NSArray *address = [NSThread callStackReturnAddresses];
+  Dl_info info;
+  if (dladdr((void *)[address[2] longLongValue], &info) == 0) return %orig;
+  NSString *path = [NSString stringWithUTF8String:info.dli_fname];
+  if ([path hasPrefix:NSBundle.mainBundle.bundlePath]) return TW_BUNDLE_ID;
+  return %orig;
 }
+
+- (id)objectForInfoDictionaryKey:(NSString *)key {
+  if ([key isEqualToString:@"CFBundleIdentifier"]) return TW_BUNDLE_ID;
+  if ([key isEqualToString:@"CFBundleDisplayName"] || [key isEqualToString:@"CFBundleName"])
+    return TW_NAME;
+  return %orig;
+}
+
 %end
 
 // https://github.com/opa334/IGSideloadFix
