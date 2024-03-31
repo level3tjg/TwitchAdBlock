@@ -16,13 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          path: TwitchAdBlock
           submodules: recursive
 
       - name: Get package info
         id: package_info
         run: |
-          cd TwitchAdBlock
           version=$(cat Makefile | grep "PACKAGE_VERSION =" | cut -d' ' -f3)
           if [ -z $version ]; then
             version=$(cat control | grep "Version:" | cut -d' ' -f2)
@@ -74,25 +72,19 @@ jobs:
           sudo make uninstall
 
       - name: Build rootless deb
-        run: |
-          cd TwitchAdBlock
-          make package
+        run: make package
         env:
-          FINALPACKAGE: 1
+          FINALPACKAGE: ${{ inputs.create_release }}
           THEOS_PACKAGE_SCHEME: rootless
 
       - name: Build rootful deb
-        run: |
-          cd TwitchAdBlock
-          make clean package
+        run: make clean package
         env:
-          FINALPACKAGE: 1
+          FINALPACKAGE: ${{ inputs.create_release }}
 
       - name: Build IPA
         if: ${{ inputs.create_release }}
-        run: |
-          cd TwitchAdBlock
-          make package
+        run: make package
         env:
           FINALPACKAGE: 1
           SIDELOADED: 1
@@ -100,15 +92,15 @@ jobs:
           APP_VERSION: ${{ steps.download_ipa.outputs.version }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.package_info.outputs.id }}_${{ steps.package_info.outputs.version }}
-          path: TwitchAdBlock/packages/*
+          path: packages/*
 
       - name: Create release
         if: ${{ inputs.create_release }}
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          files: TwitchAdBlock/packages/*
+          files: packages/*
           tag_name: v${{ steps.download_ipa.outputs.version }}-${{ steps.package_info.outputs.version }}
