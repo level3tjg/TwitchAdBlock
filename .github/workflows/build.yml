@@ -92,7 +92,7 @@ jobs:
           APP_VERSION: ${{ steps.download_ipa.outputs.version }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.package_info.outputs.id }}_${{ steps.package_info.outputs.version }}
           path: packages/*
