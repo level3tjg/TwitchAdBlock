@@ -48,18 +48,12 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
 }
 %end
 
-%hook _TtC6Twitch19TheaterAdController
-- (void)theaterWasPresented:(NSNotification *)notification {
-  %orig;
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"]) return;
-  const char *ivars[] = {
-      "displayAdController",
-      "videoAdController",
-      "vastAdController",
-  };
-  for (int i = 0; i < sizeof(ivars) / sizeof(const char *); i++)
-    if (class_getInstanceVariable(object_getClass(self), ivars[i]))
-      MSHookIvar<id>(self, ivars[i]) = NULL;
+%hook _TtC6Twitch14VASTAdProvider
+- (instancetype)init {
+  if ((self = %orig)) {
+    MSHookIvar<NSInteger>(self, "adLoadingTimeout") = -1;
+  }
+  return self;
 }
 %end
 
