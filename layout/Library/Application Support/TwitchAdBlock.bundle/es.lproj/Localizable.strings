@@ -1,0 +1,5 @@
+"settings.adblock.title"="Bloqueo de anuncios";
+"settings.adblock.footer"="Elige si quieres bloquear los anuncios";
+"settings.proxy.title"="Proxy de bloqueo de anuncios";
+"settings.proxy.footer"="Solicitudes específicas a través de un servidor proxy ubicado en un país sin publicidad";
+"settings.custom_proxy.title"="Proxy personalizado";
