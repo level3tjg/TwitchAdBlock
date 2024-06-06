@@ -141,6 +141,11 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
 }
 %end
 
+%hook TWAppUpdatePrompt
++ (void)startMonitoringSavantSettingsToShowPromptIfNeeded {
+}
+%end
+
 %ctor {
   providers = [NSMutableDictionary dictionary];
 }
