@@ -3,7 +3,8 @@
 #import <TwitchCoreUI/TWBaseTableViewController.h>
 
 @interface TWAdBlockSettingsViewController
-    : TWBaseTableViewController <UITextFieldDelegate>
+    : TWBaseTableViewController <SettingsSwitchTableViewCellDelegate,
+                                 UITextFieldDelegate>
 @property(nonatomic, assign) BOOL adblock;
 @property(nonatomic, assign) BOOL notify;
 @property(nonatomic, assign) BOOL proxy;

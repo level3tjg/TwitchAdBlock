@@ -1,6 +1,6 @@
 #import "TWAdBlockSettingsTextFieldTableViewCell.h"
 
-%subclass TWAdBlockSettingsTextFieldTableViewCell : TWBaseTableViewCell
+%subclass TWAdBlockSettingsTextFieldTableViewCell : BaseTableViewCell
 %property(nonatomic, strong) TWAdBlockSettingsTextField *textField;
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
   if ((self = %orig)) {
@@ -20,3 +20,9 @@
   self.textField.layer.cornerRadius = self.layer.cornerRadius;
 }
 %end
+
+%ctor {
+  %init(BaseTableViewCell =
+                       objc_getClass("TWBaseTableViewCell")
+                           ?: objc_getClass("_TtC12TwitchCoreUI17BaseTableViewCell"));
+}

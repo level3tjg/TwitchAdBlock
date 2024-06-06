@@ -4,6 +4,40 @@ static NSBundle *twAdBlockBundle;
 
 #define LOC(x, d) [twAdBlockBundle localizedStringForKey:x value:d table:nil]
 
+%hook _TtC6Twitch27SettingsSwitchTableViewCell
+%new
+- (id)delegate {
+  return MSHookIvar<id>(self, "delegate");
+}
+%new
+- (void)setDelegate:(id)delegate {
+  MSHookIvar<id>(self, "delegate") = delegate;
+}
+%new
+- (BOOL)isOn {
+  return MSHookIvar<UISwitch *>(self, "$__lazy_storage_$_switchView").isOn;
+}
+%new
+- (void)configureWithTitle:(NSString *)title
+                   subtitle:(NSString *)subtitle
+                  isEnabled:(BOOL)isEnabled
+                       isOn:(BOOL)isOn
+    accessibilityIdentifier:(NSString *)accessibilityIdentifier {
+  self.textLabel.text = title;
+  self.detailTextLabel.text = subtitle;
+  UISwitch *switchView = MSHookIvar<UISwitch *>(self, "$__lazy_storage_$_switchView");
+  switchView.enabled = isEnabled;
+  switchView.on = isOn;
+  self.accessibilityIdentifier = accessibilityIdentifier;
+}
+- (void)settingsSwitchToggled {
+  id<SettingsSwitchTableViewCellDelegate> delegate =
+      MSHookIvar<id<SettingsSwitchTableViewCellDelegate>>(self, "delegate");
+  if (![delegate respondsToSelector:@selector(settingsCellSwitchToggled:)]) return %orig;
+  [delegate settingsCellSwitchToggled:self];
+}
+%end
+
 %subclass TWAdBlockSettingsViewController : TWBaseTableViewController
 %property(nonatomic, assign) BOOL adblock;
 %property(nonatomic, assign) BOOL proxy;
@@ -20,9 +54,6 @@ static NSBundle *twAdBlockBundle;
 - (void)viewDidLoad {
   %orig;
   self.title = @"TwitchAdBlock";
-  [self.view
-      addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self.view
-                                                                   action:@selector(endEditing:)]];
 }
 %new
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
