@@ -63,7 +63,7 @@ jobs:
           zip -T "${{ github.workspace }}/App.ipa"
 
       - name: Download LTS IPA (Auto)
-        if: ${{ inputs.create_release && !inputs.ipa_url }}
+        if: ${{ inputs.create_release && !inputs.lts_ipa_url }}
         uses: level3tjg/decryptedappstore-action@main
         with:
           appstore_url: "https://apps.apple.com/us/app/twitch-live-streaming/id460177396"
