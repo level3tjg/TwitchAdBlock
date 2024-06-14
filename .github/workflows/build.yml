@@ -39,7 +39,7 @@ jobs:
           sudo make install
           sudo ldconfig
 
-      - name: Download IPA
+      - name: Download latest IPA
         if: ${{ inputs.create_release }}
         id: download_ipa
         uses: level3tjg/decryptedappstore-action@main
@@ -48,6 +48,16 @@ jobs:
           cache: true
           path: ${{ github.workspace }}/App.ipa
           token: ${{ secrets.DECRYPTEDAPPSTORE_SESSION_TOKEN }}
+
+      - name: Download 19.4 IPA
+        if: ${{ inputs.create_release }}
+        uses: level3tjg/decryptedappstore-action@main
+        with:
+          appstore_url: "https://apps.apple.com/us/app/twitch-live-streaming/id460177396"
+          cache: true
+          path: ${{ github.workspace }}/LTS.ipa
+          token: ${{ secrets.DECRYPTEDAPPSTORE_SESSION_TOKEN }}
+          version: "19.4"
 
       - name: Setup theos
         uses: level3tjg/theos-action@main
@@ -90,6 +100,15 @@ jobs:
           SIDELOADED: 1
           IPA: ${{ github.workspace }}/App.ipa
           APP_VERSION: ${{ steps.download_ipa.outputs.version }}
+
+      - name: Build 19.4 IPA
+        if: ${{ inputs.create_release }}
+        run: make package
+        env:
+          FINALPACKAGE: 1
+          SIDELOADED: 1
+          IPA: ${{ github.workspace }}/LTS.ipa
+          APP_VERSION: "19.4"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
