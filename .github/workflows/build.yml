@@ -5,9 +5,17 @@ on:
   workflow_dispatch:
     inputs:
       create_release:
-        description: "Create draft release"
+        description: "Build IPA and create draft release"
         default: false
         type: boolean
+      ipa_url:
+        description: "Direct URL to Decrypted IPA file"
+        type: string
+        required: false
+      lts_ipa_url:
+        description: "Direct URL to Decrypted 19.4 IPA file"
+        type: string
+        required: false
 
 jobs:
   build:
@@ -39,9 +47,8 @@ jobs:
           sudo make install
           sudo ldconfig
 
-      - name: Download latest IPA
-        if: ${{ inputs.create_release }}
-        id: download_ipa
+      - name: Download IPA (Auto)
+        if: ${{ inputs.create_release && !inputs.ipa_url }}
         uses: level3tjg/decryptedappstore-action@main
         with:
           appstore_url: "https://apps.apple.com/us/app/twitch-live-streaming/id460177396"
@@ -49,15 +56,34 @@ jobs:
           path: ${{ github.workspace }}/App.ipa
           token: ${{ secrets.DECRYPTEDAPPSTORE_SESSION_TOKEN }}
 
-      - name: Download 19.4 IPA
-        if: ${{ inputs.create_release }}
+      - name: Download IPA (Manual)
+        if: ${{ inputs.create_release && inputs.ipa_url }}
+        run: |
+          curl -Lo "${{ github.workspace }}/App.ipa" "${{ inputs.ipa_url }}"
+          zip -T "${{ github.workspace }}/App.ipa"
+
+      - name: Download LTS IPA (Auto)
+        if: ${{ inputs.create_release && !inputs.ipa_url }}
         uses: level3tjg/decryptedappstore-action@main
         with:
           appstore_url: "https://apps.apple.com/us/app/twitch-live-streaming/id460177396"
           cache: true
           path: ${{ github.workspace }}/LTS.ipa
           token: ${{ secrets.DECRYPTEDAPPSTORE_SESSION_TOKEN }}
-          version: "19.4"
+
+      - name: Download LTS IPA (Manual)
+        if: ${{ inputs.create_release && inputs.lts_ipa_url }}
+        run: |
+          curl -Lo "${{ github.workspace }}/LTS.ipa" "${{ inputs.lts_ipa_url }}"
+          zip -T "${{ github.workspace }}/LTS.ipa"
+
+      - name: Get IPA Info
+        if: ${{ inputs.create_release }}
+        id: ipa_info
+        run: |
+          info=$(unzip -p "${{ github.workspace }}/App.ipa" Payload/*.app/Info.plist)
+          echo "bundle-id=$(echo $info | xmlstarlet sel -t -v "/plist/dict/key[text()=\"CFBundleIdentifier\"]/following-sibling::*[1]/text()")" >> $GITHUB_OUTPUT
+          echo "version=$(echo $info | xmlstarlet sel -t -v "/plist/dict/key[text()=\"CFBundleShortVersionString\"]/following-sibling::*[1]/text()")" >> $GITHUB_OUTPUT
 
       - name: Setup theos
         uses: level3tjg/theos-action@main
@@ -99,9 +125,9 @@ jobs:
           FINALPACKAGE: 1
           SIDELOADED: 1
           IPA: ${{ github.workspace }}/App.ipa
-          APP_VERSION: ${{ steps.download_ipa.outputs.version }}
+          APP_VERSION: ${{ steps.ipa_info.outputs.version }}
 
-      - name: Build 19.4 IPA
+      - name: Build LTS IPA
         if: ${{ inputs.create_release }}
         run: make package
         env:
@@ -122,4 +148,4 @@ jobs:
         with:
           draft: true
           files: packages/*
-          tag_name: v${{ steps.download_ipa.outputs.version }}-${{ steps.package_info.outputs.version }}
+          tag_name: v${{ steps.ipa_info.outputs.version }}-${{ steps.package_info.outputs.version }}
