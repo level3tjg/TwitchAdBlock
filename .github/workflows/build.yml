@@ -12,10 +12,6 @@ on:
         description: "Direct URL to Decrypted IPA file"
         type: string
         required: false
-      lts_ipa_url:
-        description: "Direct URL to Decrypted 19.4 IPA file"
-        type: string
-        required: false
 
 jobs:
   build:
@@ -62,19 +58,16 @@ jobs:
           curl -Lo "${{ github.workspace }}/App.ipa" "${{ inputs.ipa_url }}"
           zip -T "${{ github.workspace }}/App.ipa"
 
-      - name: Download LTS IPA (Auto)
-        if: ${{ inputs.create_release && !inputs.lts_ipa_url }}
-        uses: level3tjg/decryptedappstore-action@main
-        with:
-          appstore_url: "https://apps.apple.com/us/app/twitch-live-streaming/id460177396"
-          cache: true
-          path: ${{ github.workspace }}/LTS.ipa
-          token: ${{ secrets.DECRYPTEDAPPSTORE_SESSION_TOKEN }}
-
-      - name: Download LTS IPA (Manual)
-        if: ${{ inputs.create_release && inputs.lts_ipa_url }}
+      - name: Download STS IPA
+        if: ${{ inputs.create_release }}
         run: |
-          curl -Lo "${{ github.workspace }}/LTS.ipa" "${{ inputs.lts_ipa_url }}"
+          curl -Lo "${{ github.workspace }}/STS.ipa" "https://nextcloud.level3tjg.me/s/b2WcDdDMN3ZXkYf/download/tv.twitch_19.4.ipa"
+          zip -T "${{ github.workspace }}/STS.ipa"
+
+      - name: Download LTS IPA
+        if: ${{ inputs.create_release }}
+        run: |
+          curl -Lo "${{ github.workspace }}/LTS.ipa" "https://nextcloud.level3tjg.me/s/QEyiJD3FK6AfxTA/download/tv.twitch_12.8.1.ipa"
           zip -T "${{ github.workspace }}/LTS.ipa"
 
       - name: Get IPA Info
@@ -123,18 +116,24 @@ jobs:
         run: make package
         env:
           FINALPACKAGE: 1
-          SIDELOADED: 1
           IPA: ${{ github.workspace }}/App.ipa
           APP_VERSION: ${{ steps.ipa_info.outputs.version }}
+
+      - name: Build STS IPA
+        if: ${{ inputs.create_release }}
+        run: make package
+        env:
+          FINALPACKAGE: 1
+          IPA: ${{ github.workspace }}/STS.ipa
+          APP_VERSION: "19.4"
 
       - name: Build LTS IPA
         if: ${{ inputs.create_release }}
         run: make package
         env:
           FINALPACKAGE: 1
-          SIDELOADED: 1
           IPA: ${{ github.workspace }}/LTS.ipa
-          APP_VERSION: "19.4"
+          APP_VERSION: "12.8.1"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
