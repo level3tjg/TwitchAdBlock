@@ -116,6 +116,7 @@ jobs:
         run: make package
         env:
           FINALPACKAGE: 1
+          SIDELOADED: 1
           IPA: ${{ github.workspace }}/App.ipa
           APP_VERSION: ${{ steps.ipa_info.outputs.version }}
 
@@ -124,6 +125,7 @@ jobs:
         run: make package
         env:
           FINALPACKAGE: 1
+          SIDELOADED: 1
           IPA: ${{ github.workspace }}/STS.ipa
           APP_VERSION: "19.4"
 
@@ -132,6 +134,7 @@ jobs:
         run: make package
         env:
           FINALPACKAGE: 1
+          SIDELOADED: 1
           IPA: ${{ github.workspace }}/LTS.ipa
           APP_VERSION: "12.8.1"
           LTS: 1
