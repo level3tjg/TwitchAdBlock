@@ -134,6 +134,7 @@ jobs:
           FINALPACKAGE: 1
           IPA: ${{ github.workspace }}/LTS.ipa
           APP_VERSION: "12.8.1"
+          LTS: 1
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
