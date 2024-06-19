@@ -14,12 +14,11 @@
   return MSHookIvar<UITextField *>(self, "textField");
 }
 - (BOOL)textFieldShouldBeginEditing:(UITextField *)textField {
-  if (!self.delegate || ![self.delegate respondsToSelector:@selector(textFieldShouldBeginEditing:)])
-    return YES;
+  if (![self.delegate respondsToSelector:@selector(textFieldShouldBeginEditing:)]) return YES;
   return [self.delegate textFieldShouldBeginEditing:textField];
 }
 - (void)textFieldDidBeginEditing:(UITextField *)textField {
-  if (self.delegate && [self.delegate respondsToSelector:@selector(textFieldDidBeginEditing:)])
+  if ([self.delegate respondsToSelector:@selector(textFieldDidBeginEditing:)])
     [self textFieldDidBeginEditing:textField];
   MSHookIvar<BOOL>(self, "isEditing") = YES;
   self.backgroundColor = self.lastConfiguredTheme.backgroundBodyColor;
@@ -29,8 +28,7 @@
 - (BOOL)textField:(UITextField *)textField
     shouldChangeCharactersInRange:(NSRange)range
                 replacementString:(NSString *)string {
-  if (!self.delegate ||
-      ![self.delegate respondsToSelector:@selector(textField:
+  if (![self.delegate respondsToSelector:@selector(textField:
                                              shouldChangeCharactersInRange:replacementString:)])
     return YES;
   return [self.delegate textField:textField
@@ -38,19 +36,18 @@
                   replacementString:string];
 }
 - (BOOL)textFieldShouldEndEditing:(UITextField *)textField {
-  if (!self.delegate || ![self.delegate respondsToSelector:@selector(textFieldShouldEndEditing:)])
-    return YES;
+  if (![self.delegate respondsToSelector:@selector(textFieldShouldEndEditing:)]) return YES;
   return [self.delegate textFieldShouldEndEditing:textField];
 }
 - (void)textFieldDidEndEditing:(UITextField *)textField {
-  if (self.delegate && [self.delegate respondsToSelector:@selector(textFieldDidEndEditing:)])
+  if ([self.delegate respondsToSelector:@selector(textFieldDidEndEditing:)])
     [self.delegate textFieldDidEndEditing:textField];
   MSHookIvar<BOOL>(self, "isEditing") = NO;
   self.backgroundColor = self.lastConfiguredTheme.backgroundInputColor;
   self.layer.borderWidth = 0;
 }
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
-  if (!self.delegate || ![self.delegate respondsToSelector:@selector(textFieldShouldReturn:)])
+  if (![self.delegate respondsToSelector:@selector(textFieldShouldReturn:)])
     return [textField resignFirstResponder];
   return [self.delegate textFieldShouldReturn:textField];
 }
