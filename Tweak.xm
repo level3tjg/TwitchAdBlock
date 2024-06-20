@@ -48,12 +48,24 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
 }
 %end
 
-%hook _TtC6Twitch14VASTAdProvider
-- (instancetype)init {
-  if ((self = %orig)) {
-    MSHookIvar<NSInteger>(self, "adLoadingTimeout") = -1;
-  }
-  return self;
+%hook _TtC6Twitch21TheaterViewController
+%new
+- (void)removeAdControllers {
+  _TtC6Twitch19TheaterAdController *theaterAdController =
+      MSHookIvar<_TtC6Twitch19TheaterAdController *>(self, "theaterAdController");
+  [@[ @"displayAdController", @"streamDisplayAdStateManager", @"vastAdController" ]
+      enumerateObjectsUsingBlock:^(NSString *name, NSUInteger idx, BOOL *stop) {
+        if (class_getInstanceVariable(object_getClass(theaterAdController), name.UTF8String))
+          MSHookIvar<id>(theaterAdController, name.UTF8String) = NULL;
+      }];
+}
+- (void)viewDidLoad {
+  %orig;
+  [NSTimer scheduledTimerWithTimeInterval:1
+                                   target:self
+                                 selector:@selector(removeAdControllers)
+                                 userInfo:nil
+                                  repeats:YES];
 }
 %end
 
@@ -114,6 +126,29 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
     data = newData;
   }
   return %orig;
+}
+%end
+
+%hook _TtC9TwitchKit18TKURLSessionClient
+- (void)URLSession:(NSURLSession *)session
+          dataTask:(NSURLSessionDataTask *)dataTask
+    didReceiveData:(NSData *)data {
+  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !data)
+    return %orig;
+  NSError *error;
+  NSMutableArray *json = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&error];
+  if (!json || error) return %orig;
+  if ([json isKindOfClass:NSArray.class]) {
+    for (NSDictionary *operation in json) {
+      NSMutableDictionary *feedItems = operation[@"data"][@"feedItems"];
+      if (feedItems)
+        feedItems[@"edges"] = [feedItems[@"edges"] filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self.node.__typename != 'FeedAd'"]];
+    }
+  }
+  NSData *modifiedData = [NSJSONSerialization dataWithJSONObject:json options:0 error:&error];
+  if (error) return %orig;
+  data = modifiedData;
+  %orig;
 }
 %end
 
