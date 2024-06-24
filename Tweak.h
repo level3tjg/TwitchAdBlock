@@ -6,8 +6,4 @@
 #import <TwitchCoreUI/TWDefaultThemeManager.h>
 #import <TwitchKit/TKGraphQL.h>
 
-@interface _TtC6Twitch21TheaterViewController ()
-- (void)removeAdControllers;
-@end
-
-static NSMutableDictionary<NSString *, TWHLSProvider *> *providers;
+#import "fishhook/fishhook.h"

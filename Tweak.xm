@@ -1,30 +1,119 @@
 #import "Tweak.h"
 
-static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
-  if (![request.URL.host isEqualToString:@"gql.twitch.tv"] ||
-      ![request.URL.path isEqualToString:@"/gql"])
-    return data;
-  NSError *error;
-  NSMutableDictionary *json = [NSJSONSerialization JSONObjectWithData:data
-                                                              options:NSJSONReadingMutableContainers
-                                                                error:&error];
-  if (error || ![json isKindOfClass:NSDictionary.class]) return data;
+// Shared funcs
 
-  uint32_t platformLength = 0;
-  while (platformLength < 3) platformLength = arc4random_uniform(8);
-  NSString *platform = [[NSUUID UUID].UUIDString substringWithRange:NSMakeRange(0, platformLength)];
-  if ([json[@"operationName"] isEqualToString:@"StreamAccessToken"] ||
-      [json[@"query"] containsString:@"StreamAccessToken"] ||
-      [json[@"operationName"] isEqualToString:@"VodAccessToken"])
-    json[@"variables"][@"params"][@"platform"] = platform;
-  else if ([json[@"operationName"] isEqualToString:@"ClipAccessToken"])
-    json[@"variables"][@"tokenParams"][@"platform"] = platform;
-  else
-    return data;
-  NSData *modifiedData = [NSJSONSerialization dataWithJSONObject:json options:0 error:&error];
-  if (error) return data;
-  return modifiedData;
+static NSData *TWAdBlockRequestData(NSURLRequest *request, NSData *data) {
+  NSData *modifiedData;
+  if ([request.URL.host isEqualToString:@"gql.twitch.tv"] &&
+      [request.URL.path isEqualToString:@"/gql"]) {
+    NSError *error;
+    id json = [NSJSONSerialization JSONObjectWithData:data
+                                              options:NSJSONReadingMutableContainers
+                                                error:&error];
+    if (!json || error) return data;
+    if ([json isKindOfClass:NSMutableDictionary.class]) {
+      NSMutableDictionary *jsonDictionary = json;
+      uint32_t platformLength = 0;
+      while (platformLength < 3) platformLength = arc4random_uniform(8);
+      NSString *platform =
+          [[NSUUID UUID].UUIDString substringWithRange:NSMakeRange(0, platformLength)];
+      if ([jsonDictionary[@"operationName"] isEqualToString:@"StreamAccessToken"] ||
+          [jsonDictionary[@"query"] containsString:@"StreamAccessToken"] ||
+          [jsonDictionary[@"operationName"] isEqualToString:@"VodAccessToken"])
+        jsonDictionary[@"variables"][@"params"][@"platform"] = platform;
+      else if ([jsonDictionary[@"operationName"] isEqualToString:@"ClipAccessToken"])
+        jsonDictionary[@"variables"][@"tokenParams"][@"platform"] = platform;
+    }
+    modifiedData = [NSJSONSerialization dataWithJSONObject:json options:0 error:&error];
+    if (error) return data;
+  }
+  return modifiedData ?: data;
 }
+
+static NSData *TWAdBlockResponseData(NSURLRequest *request, NSData *data) {
+  NSData *modifiedData;
+  if ([request.URL.host isEqualToString:@"gql.twitch.tv"] &&
+      [request.URL.path isEqualToString:@"/gql"]) {
+    NSError *error;
+    id json = [NSJSONSerialization JSONObjectWithData:data
+                                              options:NSJSONReadingMutableContainers
+                                                error:&error];
+    if (!json || error) return data;
+    if ([json isKindOfClass:NSMutableArray.class]) {
+      NSMutableArray *jsonArray = json;
+      for (NSMutableDictionary *operation in jsonArray) {
+        NSMutableDictionary *feedItems = operation[@"data"][@"feedItems"];
+        if (feedItems) {
+          NSLog(@"Blocking feed ads");
+          feedItems[@"edges"] = [feedItems[@"edges"]
+              filteredArrayUsingPredicate:
+                  [NSPredicate predicateWithFormat:@"self.node.__typename != 'FeedAd'"]];
+        }
+      }
+    }
+    modifiedData = [NSJSONSerialization dataWithJSONObject:json options:0 error:&error];
+    if (error) return data;
+  }
+  return modifiedData ?: data;
+}
+
+// Server-side video ad blocking
+
+%hook NSURLSession
+- (NSURLSessionUploadTask *)uploadTaskWithRequest:(NSURLRequest *)request
+                                         fromData:(NSData *)bodyData {
+  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !bodyData)
+    return %orig;
+  bodyData = TWAdBlockRequestData(request, bodyData);
+  return %orig;
+}
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
+  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !request.HTTPBody)
+    return %orig;
+  NSData *modifiedData = TWAdBlockRequestData(request, request.HTTPBody);
+  if ([request isKindOfClass:NSMutableURLRequest.class]) {
+    ((NSMutableURLRequest *)request).HTTPBody = modifiedData;
+  } else {
+    NSMutableURLRequest *mutableRequest = request.mutableCopy;
+    mutableRequest.HTTPBody = modifiedData;
+    request = mutableRequest.copy;
+  }
+  return %orig;
+}
+%end
+
+// Client-side video ad blocking
+
+id (*orig_swift_unknownObjectWeakLoadStrong)();
+id hook_swift_unknownObjectWeakLoadStrong() {
+  id obj = orig_swift_unknownObjectWeakLoadStrong();
+  if (class_getInstanceVariable(object_getClass(obj), "theaterAdController")) {
+    id theaterAdController = MSHookIvar<id>(obj, "theaterAdController");
+    const char *ivars[] = {"displayAdController", "streamDisplayAdStateManager",
+                           "vastAdController"};
+    for (int i = 0; i < sizeof(ivars) / sizeof(const char *); i++) {
+      const char *ivar = ivars[i];
+      if (class_getInstanceVariable(object_getClass(theaterAdController), ivar))
+        MSHookIvar<id>(theaterAdController, ivar) = NULL;
+    }
+  }
+  return obj;
+}
+
+// Block ads in feed tab
+
+%hook _TtC9TwitchKit18TKURLSessionClient
+- (void)URLSession:(NSURLSession *)session
+          dataTask:(NSURLSessionDataTask *)dataTask
+    didReceiveData:(NSData *)data {
+  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !data)
+    return %orig;
+  data = TWAdBlockResponseData(dataTask.currentRequest, data);
+  %orig;
+}
+%end
+
+// Block ads in following tab
 
 %hook _TtC6Twitch23FollowingViewController
 - (instancetype)initWithGraphQL:(_TtC9TwitchKit9TKGraphQL *)graphQL
@@ -48,49 +137,7 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
 }
 %end
 
-%hook _TtC6Twitch21TheaterViewController
-%new
-- (void)removeAdControllers {
-  _TtC6Twitch19TheaterAdController *theaterAdController =
-      MSHookIvar<_TtC6Twitch19TheaterAdController *>(self, "theaterAdController");
-  [@[ @"displayAdController", @"streamDisplayAdStateManager", @"vastAdController" ]
-      enumerateObjectsUsingBlock:^(NSString *name, NSUInteger idx, BOOL *stop) {
-        if (class_getInstanceVariable(object_getClass(theaterAdController), name.UTF8String))
-          MSHookIvar<id>(theaterAdController, name.UTF8String) = NULL;
-      }];
-}
-- (void)viewDidLoad {
-  %orig;
-  [NSTimer scheduledTimerWithTimeInterval:1
-                                   target:self
-                                 selector:@selector(removeAdControllers)
-                                 userInfo:nil
-                                  repeats:YES];
-}
-%end
-
-%hook NSURLSession
-- (NSURLSessionUploadTask *)uploadTaskWithRequest:(NSURLRequest *)request
-                                         fromData:(NSData *)bodyData {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !bodyData)
-    return %orig;
-  bodyData = TWAdBlockData(request, bodyData);
-  return %orig;
-}
-- (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !request.HTTPBody)
-    return %orig;
-  NSData *modifiedData = TWAdBlockData(request, request.HTTPBody);
-  if ([request isKindOfClass:NSMutableURLRequest.class]) {
-    ((NSMutableURLRequest *)request).HTTPBody = modifiedData;
-  } else {
-    NSMutableURLRequest *mutableRequest = request.mutableCopy;
-    mutableRequest.HTTPBody = modifiedData;
-    request = mutableRequest.copy;
-  }
-  return %orig;
-}
-%end
+// Proxy m3u8 requests
 
 %hook _TtC6PMHTTPP33_7DE81BD859C4442C3EC1B705AFDC8F2922MetricsSessionDelegate
 - (void)URLSession:(NSURLSession *)session
@@ -101,9 +148,8 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
       ![userDefaults boolForKey:@"TWAdBlockProxyEnabled"])
     return %orig;
   if ([dataTask.currentRequest.URL.host isEqualToString:@"usher.ttvnw.net"]) {
-    NSURLSessionConfiguration *configuration =
-        NSURLSessionConfiguration.defaultSessionConfiguration;
-    NSString *proxy = [userDefaults boolForKey:@"TWAdBlockCustomProxy"]
+    NSURLSessionConfiguration *configuration = session.configuration;
+    NSString *proxy = [userDefaults boolForKey:@"TWAdBlockCustomProxyEnabled"]
                           ? [userDefaults stringForKey:@"TWAdBlockProxy"]
                           : PROXY_URL;
     NSArray<NSString *> *proxyComponents = [proxy componentsSeparatedByString:@":"];
@@ -129,52 +175,7 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
 }
 %end
 
-%hook _TtC9TwitchKit18TKURLSessionClient
-- (void)URLSession:(NSURLSession *)session
-          dataTask:(NSURLSessionDataTask *)dataTask
-    didReceiveData:(NSData *)data {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !data)
-    return %orig;
-  NSError *error;
-  NSMutableArray *json = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&error];
-  if (!json || error) return %orig;
-  if ([json isKindOfClass:NSArray.class]) {
-    for (NSDictionary *operation in json) {
-      NSMutableDictionary *feedItems = operation[@"data"][@"feedItems"];
-      if (feedItems)
-        feedItems[@"edges"] = [feedItems[@"edges"] filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"self.node.__typename != 'FeedAd'"]];
-    }
-  }
-  NSData *modifiedData = [NSJSONSerialization dataWithJSONObject:json options:0 error:&error];
-  if (error) return %orig;
-  data = modifiedData;
-  %orig;
-}
-%end
-
-%hook _TtC6Twitch18LiveHLSURLProvider
-- (NSURL *)manifestURLWithToken:(NSString *)token
-                tokenDictionary:(NSDictionary *)tokenDictionary
-                      signature:(NSString *)signature {
-  NSURL *manifestURL = %orig;
-  providers[manifestURL.path] = self;
-  return manifestURL;
-}
-%end
-
-%hook _TtC6Twitch21PlayerCoreVideoPlayer
-- (void)player:(IVSPlayer *)player
-    didOutputMetadataWithType:(NSString *)type
-                      content:(NSData *)content {
-  %orig;
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"]) return;
-  if ([[[NSString alloc] initWithData:content
-                             encoding:NSUTF8StringEncoding] containsString:@"stitched-ad"]) {
-    TWHLSProvider *provider = providers[player.path.path];
-    if (provider) [provider requestManifest];
-  }
-}
-%end
+// Block update prompt
 
 %hook TWAppUpdatePrompt
 + (void)startMonitoringSavantSettingsToShowPromptIfNeeded {
@@ -182,5 +183,8 @@ static NSData *TWAdBlockData(NSURLRequest *request, NSData *data) {
 %end
 
 %ctor {
-  providers = [NSMutableDictionary dictionary];
+  rebind_symbols((struct rebinding[]){{"swift_unknownObjectWeakLoadStrong",
+                                       (void *)hook_swift_unknownObjectWeakLoadStrong,
+                                       (void **)&orig_swift_unknownObjectWeakLoadStrong}},
+                 1);
 }

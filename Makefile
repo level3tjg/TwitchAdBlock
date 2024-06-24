@@ -7,16 +7,24 @@ ifdef APP_VERSION
   PACKAGE_VERSION := $(APP_VERSION)-$(PACKAGE_VERSION)
 endif
 
-TARGET := iphone:clang:14.5:12.0
+ifeq ($(STS),1)
+  PACKAGE_VERSION := $(PACKAGE_VERSION)-STS
+else ifeq ($(LTS),1)
+  PACKAGE_VERSION := $(PACKAGE_VERSION)-LTS
+endif
+
+TARGET := iphone:clang:latest:12.4
 INSTALL_TARGET_PROCESSES = Twitch
 
 ARCHS = arm64
+
+ADDITIONAL_CFLAGS = -Wno-module-import-in-extern-c
 
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = TwitchAdBlock
 
-$(TWEAK_NAME)_FILES = $(wildcard *.*m)
+$(TWEAK_NAME)_FILES = $(wildcard *.*m) fishhook/fishhook.c
 $(TWEAK_NAME)_CFLAGS = -fobjc-arc -Iinclude -DPROXY_URL=@\"firefox.api.cdn-perfprod.com:2023\"
 ifeq ($(SIDELOADED),1)
   $(TWEAK_NAME)_FILES += Sideloaded.x fishhook/fishhook.c
