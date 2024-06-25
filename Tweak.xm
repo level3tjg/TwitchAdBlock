@@ -1,9 +1,11 @@
 #import "Tweak.h"
 
-// Shared funcs
+NSBundle *tweakBundle;
+NSUserDefaults *tweakDefaults;
 
 static NSData *TWAdBlockRequestData(NSURLRequest *request, NSData *data) {
-  NSData *modifiedData;
+  if (![tweakDefaults boolForKey:@"TWAdBlockEnabled"] || !request || !data) return data;
+  __block NSData *modifiedData;
   if ([request.URL.host isEqualToString:@"gql.twitch.tv"] &&
       [request.URL.path isEqualToString:@"/gql"]) {
     NSError *error;
@@ -31,7 +33,8 @@ static NSData *TWAdBlockRequestData(NSURLRequest *request, NSData *data) {
 }
 
 static NSData *TWAdBlockResponseData(NSURLRequest *request, NSData *data) {
-  NSData *modifiedData;
+  if ([tweakDefaults boolForKey:@"TWAdBlockEnabled"] || !request || !data) return data;
+  __block NSData *modifiedData;
   if ([request.URL.host isEqualToString:@"gql.twitch.tv"] &&
       [request.URL.path isEqualToString:@"/gql"]) {
     NSError *error;
@@ -44,7 +47,6 @@ static NSData *TWAdBlockResponseData(NSURLRequest *request, NSData *data) {
       for (NSMutableDictionary *operation in jsonArray) {
         NSMutableDictionary *feedItems = operation[@"data"][@"feedItems"];
         if (feedItems) {
-          NSLog(@"Blocking feed ads");
           feedItems[@"edges"] = [feedItems[@"edges"]
               filteredArrayUsingPredicate:
                   [NSPredicate predicateWithFormat:@"self.node.__typename != 'FeedAd'"]];
@@ -57,19 +59,41 @@ static NSData *TWAdBlockResponseData(NSURLRequest *request, NSData *data) {
   return modifiedData ?: data;
 }
 
+static NSData *TWAdBlockProxyData(NSURLRequest *request, NSData *data) {
+  if (![tweakDefaults boolForKey:@"TWAdBlockEnabled"] ||
+      ![tweakDefaults boolForKey:@"TWAdBlockProxyEnabled"] || !request || !data)
+    return data;
+  __block NSData *modifiedData;
+  if ([request.URL.host isEqualToString:@"usher.ttvnw.net"]) {
+    NSURLSessionConfiguration *configuration =
+        NSURLSessionConfiguration.defaultSessionConfiguration;
+    NSString *proxy = [tweakDefaults boolForKey:@"TWAdBlockCustomProxyEnabled"]
+                          ? [tweakDefaults stringForKey:@"TWAdBlockProxy"]
+                          : PROXY_URL;
+    NSArray<NSString *> *proxyComponents = [proxy componentsSeparatedByString:@":"];
+    NSString *host = proxyComponents[0];
+    NSNumber *port = proxyComponents.count != 1 ? @(proxyComponents[1].integerValue) : @8080;
+    configuration.connectionProxyDictionary = @{
+      @"HTTPSEnable" : @YES,
+      @"HTTPSProxy" : host,
+      @"HTTPSPort" : port,
+    };
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    [[session dataTaskWithURL:request.URL
+            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+              if (!error) modifiedData = data;
+              dispatch_semaphore_signal(semaphore);
+            }] resume];
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+  }
+  return modifiedData ?: data;
+}
+
 // Server-side video ad blocking
 
 %hook NSURLSession
-- (NSURLSessionUploadTask *)uploadTaskWithRequest:(NSURLRequest *)request
-                                         fromData:(NSData *)bodyData {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !bodyData)
-    return %orig;
-  bodyData = TWAdBlockRequestData(request, bodyData);
-  return %orig;
-}
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !request.HTTPBody)
-    return %orig;
   NSData *modifiedData = TWAdBlockRequestData(request, request.HTTPBody);
   if ([request isKindOfClass:NSMutableURLRequest.class]) {
     ((NSMutableURLRequest *)request).HTTPBody = modifiedData;
@@ -78,6 +102,14 @@ static NSData *TWAdBlockResponseData(NSURLRequest *request, NSData *data) {
     mutableRequest.HTTPBody = modifiedData;
     request = mutableRequest.copy;
   }
+  return %orig;
+}
+%end
+
+%hook NSURLSession
+- (NSURLSessionUploadTask *)uploadTaskWithRequest:(NSURLRequest *)request
+                                         fromData:(NSData *)bodyData {
+  bodyData = TWAdBlockRequestData(request, bodyData);
   return %orig;
 }
 %end
@@ -106,8 +138,6 @@ id hook_swift_unknownObjectWeakLoadStrong() {
 - (void)URLSession:(NSURLSession *)session
           dataTask:(NSURLSessionDataTask *)dataTask
     didReceiveData:(NSData *)data {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"] || !data)
-    return %orig;
   data = TWAdBlockResponseData(dataTask.currentRequest, data);
   %orig;
 }
@@ -118,8 +148,7 @@ id hook_swift_unknownObjectWeakLoadStrong() {
 %hook _TtC6Twitch23FollowingViewController
 - (instancetype)initWithGraphQL:(_TtC9TwitchKit9TKGraphQL *)graphQL
                    themeManager:(_TtC12TwitchCoreUI21TWDefaultThemeManager *)themeManager {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"])
-    return %orig;
+  if (![tweakDefaults boolForKey:@"TWAdBlockEnabled"]) return %orig;
   if ((self = %orig) && class_getInstanceVariable(self.class, "headlinerManager"))
     MSHookIvar<id>(MSHookIvar<id>(self, "headlinerManager"), "displayAdStateManager") = NULL;
   return self;
@@ -128,8 +157,7 @@ id hook_swift_unknownObjectWeakLoadStrong() {
 
 %hook _TtC6Twitch27HeadlinerFollowingAdManager
 + (instancetype)shared {
-  if (![NSUserDefaults.standardUserDefaults boolForKey:@"TWAdBlockEnabled"])
-    return %orig;
+  if (![tweakDefaults boolForKey:@"TWAdBlockEnabled"]) return %orig;
   _TtC6Twitch27HeadlinerFollowingAdManager *shared = %orig;
   if (shared && class_getInstanceVariable(shared.class, "displayAdStateManager"))
     MSHookIvar<id>(shared, "displayAdStateManager") = NULL;
@@ -143,34 +171,7 @@ id hook_swift_unknownObjectWeakLoadStrong() {
 - (void)URLSession:(NSURLSession *)session
           dataTask:(NSURLSessionDataTask *)dataTask
     didReceiveData:(NSData *)data {
-  NSUserDefaults *userDefaults = NSUserDefaults.standardUserDefaults;
-  if (![userDefaults boolForKey:@"TWAdBlockEnabled"] ||
-      ![userDefaults boolForKey:@"TWAdBlockProxyEnabled"])
-    return %orig;
-  if ([dataTask.currentRequest.URL.host isEqualToString:@"usher.ttvnw.net"]) {
-    NSURLSessionConfiguration *configuration = session.configuration;
-    NSString *proxy = [userDefaults boolForKey:@"TWAdBlockCustomProxyEnabled"]
-                          ? [userDefaults stringForKey:@"TWAdBlockProxy"]
-                          : PROXY_URL;
-    NSArray<NSString *> *proxyComponents = [proxy componentsSeparatedByString:@":"];
-    NSString *host = proxyComponents[0];
-    NSNumber *port = proxyComponents.count != 1 ? @(proxyComponents[1].integerValue) : @8080;
-    configuration.connectionProxyDictionary = @{
-      @"HTTPSEnable" : @YES,
-      @"HTTPSProxy" : host,
-      @"HTTPSPort" : port,
-    };
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
-    __block NSData *newData = data;
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-    [[session dataTaskWithURL:dataTask.currentRequest.URL
-            completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-              if (!error) newData = data;
-              dispatch_semaphore_signal(semaphore);
-            }] resume];
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    data = newData;
-  }
+  data = TWAdBlockProxyData(dataTask.currentRequest, data);
   return %orig;
 }
 %end
@@ -183,6 +184,20 @@ id hook_swift_unknownObjectWeakLoadStrong() {
 %end
 
 %ctor {
+  tweakBundle = [NSBundle bundleWithPath:[NSBundle.mainBundle pathForResource:@"TwitchAdBlock"
+                                                                       ofType:@"bundle"]];
+  if (!tweakBundle)
+    tweakBundle = [NSBundle bundleWithPath:@THEOS_PACKAGE_INSTALL_PREFIX
+                            @"/Library/Application Support/TwitchAdBlock.bundle"];
+  tweakDefaults = [[NSUserDefaults alloc] initWithSuiteName:@"com.level3tjg.twitchadblock"];
+  if (![tweakDefaults objectForKey:@"TWAdBlockEnabled"])
+    [tweakDefaults setBool:YES forKey:@"TWAdBlockEnabled"];
+  if (![tweakDefaults objectForKey:@"TWAdBlockProxy"])
+    [tweakDefaults setObject:PROXY_URL forKey:@"TWAdBlockProxy"];
+  if (![tweakDefaults objectForKey:@"TWAdBlockProxyEnabled"])
+    [tweakDefaults setBool:NO forKey:@"TWAdBlockProxyEnabled"];
+  if (![tweakDefaults objectForKey:@"TWAdBlockCustomProxyEnabled"])
+    [tweakDefaults setBool:NO forKey:@"TWAdBlockCustomProxyEnabled"];
   rebind_symbols((struct rebinding[]){{"swift_unknownObjectWeakLoadStrong",
                                        (void *)hook_swift_unknownObjectWeakLoadStrong,
                                        (void **)&orig_swift_unknownObjectWeakLoadStrong}},

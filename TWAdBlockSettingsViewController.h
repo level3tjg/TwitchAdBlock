@@ -4,8 +4,7 @@
 
 @interface TWAdBlockSettingsViewController
     : TWBaseTableViewController <SettingsSwitchTableViewCellDelegate, UITextFieldDelegate>
-@property(nonatomic, assign) BOOL adblock;
-@property(nonatomic, assign) BOOL notify;
-@property(nonatomic, assign) BOOL proxy;
-@property(nonatomic, assign) BOOL customProxy;
+@property(nonatomic, assign) BOOL adblockEnabled;
+@property(nonatomic, assign) BOOL proxyEnabled;
+@property(nonatomic, assign) BOOL customProxyEnabled;
 @end
