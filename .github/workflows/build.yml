@@ -128,6 +128,7 @@ jobs:
           SIDELOADED: 1
           IPA: ${{ github.workspace }}/STS.ipa
           APP_VERSION: "19.4"
+          STS: 1
 
       - name: Build LTS IPA
         if: ${{ inputs.create_release }}
