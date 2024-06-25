@@ -9,7 +9,8 @@ endif
 
 ifeq ($(STS),1)
   PACKAGE_VERSION := $(PACKAGE_VERSION)-STS
-else ifeq ($(LTS),1)
+endif
+ifeq ($(LTS),1)
   PACKAGE_VERSION := $(PACKAGE_VERSION)-LTS
 endif
 
