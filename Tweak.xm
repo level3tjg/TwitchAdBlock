@@ -223,6 +223,11 @@ id hook_swift_unknownObjectWeakLoadStrong() {
     %init(mediaserverd);
     return;
   }
+  %init(Twitch);
+  rebind_symbols((struct rebinding[]){{"swift_unknownObjectWeakLoadStrong",
+                                       (void *)hook_swift_unknownObjectWeakLoadStrong,
+                                       (void **)&orig_swift_unknownObjectWeakLoadStrong}},
+                 1);
   tweakBundle = [NSBundle bundleWithPath:[NSBundle.mainBundle pathForResource:@"TwitchAdBlock"
                                                                        ofType:@"bundle"]];
   if (!tweakBundle)
@@ -237,9 +242,4 @@ id hook_swift_unknownObjectWeakLoadStrong() {
     [tweakDefaults setBool:NO forKey:@"TWAdBlockProxyEnabled"];
   if (![tweakDefaults objectForKey:@"TWAdBlockCustomProxyEnabled"])
     [tweakDefaults setBool:NO forKey:@"TWAdBlockCustomProxyEnabled"];
-  %init(Twitch);
-  rebind_symbols((struct rebinding[]){{"swift_unknownObjectWeakLoadStrong",
-                                       (void *)hook_swift_unknownObjectWeakLoadStrong,
-                                       (void **)&orig_swift_unknownObjectWeakLoadStrong}},
-                 1);
 }

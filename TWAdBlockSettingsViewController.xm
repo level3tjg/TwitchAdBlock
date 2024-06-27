@@ -185,3 +185,7 @@ extern "C" NSUserDefaults *tweakDefaults;
   notify_post("com.level3tjg.twitchadblock/updatePrefs");
 }
 %end
+
+%ctor {
+  if (![NSProcessInfo.processInfo.processName isEqualToString:@"mediaserverd"]) %init;
+}

@@ -30,3 +30,7 @@ extern "C" NSUserDefaults *tweakDefaults;
   return %orig;
 }
 %end
+
+%ctor {
+  if (![NSProcessInfo.processInfo.processName isEqualToString:@"mediaserverd"]) %init;
+}

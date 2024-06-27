@@ -22,7 +22,8 @@
 %end
 
 %ctor {
-  %init(BaseTableViewCell =
-                       objc_getClass("TWBaseTableViewCell")
-                           ?: objc_getClass("_TtC12TwitchCoreUI17BaseTableViewCell"));
+  if (![NSProcessInfo.processInfo.processName isEqualToString:@"mediaserverd"])
+    %init(BaseTableViewCell =
+                         objc_getClass("TWBaseTableViewCell")
+                             ?: objc_getClass("_TtC12TwitchCoreUI17BaseTableViewCell"));
 }
