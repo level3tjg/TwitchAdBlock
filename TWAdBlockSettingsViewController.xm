@@ -118,8 +118,7 @@ extern "C" NSUserDefaults *tweakDefaults;
           TWAdBlockSettingsTextField *textField =
               ((TWAdBlockSettingsTextFieldTableViewCell *)cell).textField;
           textField.textField.placeholder = PROXY_URL;
-          textField.textField.text =
-              [tweakDefaults stringForKey:@"TWAdBlockProxy"];
+          textField.textField.text = [tweakDefaults stringForKey:@"TWAdBlockProxy"];
           textField.delegate = self;
           return cell;
       }
@@ -177,9 +176,12 @@ extern "C" NSUserDefaults *tweakDefaults;
   }
 
   [tweakDefaults synchronize];
+  notify_post("com.level3tjg.twitchadblock/updatePrefs");
 }
 %new
 - (void)textFieldDidEndEditing:(UITextField *)textField {
   [tweakDefaults setValue:textField.text forKey:@"TWAdBlockProxy"];
+  [tweakDefaults synchronize];
+  notify_post("com.level3tjg.twitchadblock/updatePrefs");
 }
 %end

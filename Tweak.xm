@@ -90,7 +90,24 @@ static NSData *TWAdBlockProxyData(NSURLRequest *request, NSData *data) {
   return modifiedData ?: data;
 }
 
+// Proxy m3u8 requests
+
+%group mediaserverd
+
+%hook FigHTTPRequestSessionDataDelegate
+- (void)URLSession:(NSURLSession *)session
+          dataTask:(NSURLSessionDataTask *)dataTask
+    didReceiveData:(NSData *)data {
+  data = TWAdBlockProxyData(dataTask.currentRequest, data);
+  %orig;
+}
+%end
+
+%end
+
 // Server-side video ad blocking
+
+%group Shared
 
 %hook NSURLSession
 - (NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request {
@@ -105,6 +122,10 @@ static NSData *TWAdBlockProxyData(NSURLRequest *request, NSData *data) {
   return %orig;
 }
 %end
+
+%end
+
+%group Twitch
 
 %hook NSURLSession
 - (NSURLSessionUploadTask *)uploadTaskWithRequest:(NSURLRequest *)request
@@ -183,7 +204,25 @@ id hook_swift_unknownObjectWeakLoadStrong() {
 }
 %end
 
+%end
+
 %ctor {
+  %init(Shared);
+  if ([NSProcessInfo.processInfo.processName isEqualToString:@"mediaserverd"]) {
+    void (^notify_handler)(int) = ^(int token) {
+      tweakDefaults = [[NSUserDefaults alloc]
+          _initWithSuiteName:@"com.level3tjg.twitchadblock"
+                   container:[[%c(LSApplicationProxy)
+                                 applicationProxyForIdentifier:@"tv.twitch"] dataContainerURL]];
+    };
+    notify_handler(0);
+    int token;
+    notify_register_dispatch("com.level3tjg.twitchadblock/updatePrefs", &token,
+                             dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0),
+                             notify_handler);
+    %init(mediaserverd);
+    return;
+  }
   tweakBundle = [NSBundle bundleWithPath:[NSBundle.mainBundle pathForResource:@"TwitchAdBlock"
                                                                        ofType:@"bundle"]];
   if (!tweakBundle)
@@ -198,6 +237,7 @@ id hook_swift_unknownObjectWeakLoadStrong() {
     [tweakDefaults setBool:NO forKey:@"TWAdBlockProxyEnabled"];
   if (![tweakDefaults objectForKey:@"TWAdBlockCustomProxyEnabled"])
     [tweakDefaults setBool:NO forKey:@"TWAdBlockCustomProxyEnabled"];
+  %init(Twitch);
   rebind_symbols((struct rebinding[]){{"swift_unknownObjectWeakLoadStrong",
                                        (void *)hook_swift_unknownObjectWeakLoadStrong,
                                        (void **)&orig_swift_unknownObjectWeakLoadStrong}},
