@@ -81,8 +81,7 @@ extern "C" NSUserDefaults *tweakDefaults;
                configureWithTitle:LOC(@"settings.adblock.title", @"Ad Block")
                          subtitle:nil
                         isEnabled:YES
-                             isOn:[NSUserDefaults.standardUserDefaults
-                                      boolForKey:@"TWAdBlockEnabled"]
+                             isOn:[tweakDefaults boolForKey:@"TWAdBlockEnabled"]
           accessibilityIdentifier:@"AdBlockSwitchCell"];
       [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
       return cell;
@@ -96,8 +95,7 @@ extern "C" NSUserDefaults *tweakDefaults;
                    configureWithTitle:LOC(@"settings.proxy.title", @"Ad Block Proxy")
                              subtitle:nil
                             isEnabled:YES
-                                 isOn:[NSUserDefaults.standardUserDefaults
-                                          boolForKey:@"TWAdBlockProxyEnabled"]
+                                 isOn:[tweakDefaults boolForKey:@"TWAdBlockProxyEnabled"]
               accessibilityIdentifier:@"AdBlockProxySwitchCell"];
           [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
           return cell;
@@ -109,8 +107,7 @@ extern "C" NSUserDefaults *tweakDefaults;
                    configureWithTitle:LOC(@"settings.custom_proxy.title", @"Custom Proxy")
                              subtitle:nil
                             isEnabled:YES
-                                 isOn:[NSUserDefaults.standardUserDefaults
-                                          boolForKey:@"TWAdBlockCustomProxyEnabled"]
+                                 isOn:[tweakDefaults boolForKey:@"TWAdBlockCustomProxyEnabled"]
               accessibilityIdentifier:@"AdBlockCustomProxySwitchCell"];
           [(_TtC6Twitch27SettingsSwitchTableViewCell *)cell setDelegate:self];
           return cell;
@@ -122,7 +119,7 @@ extern "C" NSUserDefaults *tweakDefaults;
               ((TWAdBlockSettingsTextFieldTableViewCell *)cell).textField;
           textField.textField.placeholder = PROXY_URL;
           textField.textField.text =
-              [NSUserDefaults.standardUserDefaults stringForKey:@"TWAdBlockProxy"];
+              [tweakDefaults stringForKey:@"TWAdBlockProxy"];
           textField.delegate = self;
           return cell;
       }
@@ -144,9 +141,8 @@ extern "C" NSUserDefaults *tweakDefaults;
 }
 %new
 - (void)settingsCellSwitchToggled:(UISwitch *)sender {
-  NSUserDefaults *userDefaults = NSUserDefaults.standardUserDefaults;
   if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockSwitchCell"]) {
-    [userDefaults setBool:sender.isOn forKey:@"TWAdBlockEnabled"];
+    [tweakDefaults setBool:sender.isOn forKey:@"TWAdBlockEnabled"];
     self.adblockEnabled = sender.isOn;
 
     NSIndexSet *sections = [NSIndexSet indexSetWithIndex:1];
@@ -155,7 +151,7 @@ extern "C" NSUserDefaults *tweakDefaults;
     else
       [self.tableView deleteSections:sections withRowAnimation:UITableViewRowAnimationFade];
   } else if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockProxySwitchCell"]) {
-    [userDefaults setBool:sender.isOn forKey:@"TWAdBlockProxyEnabled"];
+    [tweakDefaults setBool:sender.isOn forKey:@"TWAdBlockProxyEnabled"];
     self.proxyEnabled = sender.isOn;
 
     NSMutableArray *indexPaths = [NSMutableArray array];
@@ -168,7 +164,7 @@ extern "C" NSUserDefaults *tweakDefaults;
       [self.tableView deleteRowsAtIndexPaths:indexPaths
                             withRowAnimation:UITableViewRowAnimationFade];
   } else if ([sender.accessibilityIdentifier isEqualToString:@"AdBlockCustomProxySwitchCell"]) {
-    [userDefaults setBool:sender.isOn forKey:@"TWAdBlockCustomProxyEnabled"];
+    [tweakDefaults setBool:sender.isOn forKey:@"TWAdBlockCustomProxyEnabled"];
     self.customProxyEnabled = sender.isOn;
 
     NSArray *indexPaths = @[ [NSIndexPath indexPathForRow:2 inSection:1] ];
@@ -180,10 +176,10 @@ extern "C" NSUserDefaults *tweakDefaults;
                             withRowAnimation:UITableViewRowAnimationFade];
   }
 
-  [userDefaults synchronize];
+  [tweakDefaults synchronize];
 }
 %new
 - (void)textFieldDidEndEditing:(UITextField *)textField {
-  [NSUserDefaults.standardUserDefaults setValue:textField.text forKey:@"TWAdBlockProxy"];
+  [tweakDefaults setValue:textField.text forKey:@"TWAdBlockProxy"];
 }
 %end
