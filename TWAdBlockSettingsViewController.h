@@ -1,6 +1,7 @@
 #import <Twitch/SettingsSwitchTableViewCell.h>
+#import <Twitch/VersionLabel.h>
 #import <TwitchCoreUI/TWBaseTableViewController.h>
-#import <notify.h>
+#import "Config.h"
 #import "TWAdBlockSettingsTextFieldTableViewCell.h"
 
 @interface TWAdBlockSettingsViewController

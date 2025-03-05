@@ -8,7 +8,8 @@
         initWithFrame:self.frame
          themeManager:[objc_getClass("_TtC12TwitchCoreUI21TWDefaultThemeManager")
                           defaultThemeManager]];
-    UITextField *textField = MSHookIvar<UITextField *>(self.textField, "textField");
+    UITextField *textField = object_getIvar(
+        self.textField, class_getInstanceVariable(object_getClass(self.textField), "textField"));
     textField.returnKeyType = UIReturnKeyDone;
     [self addSubview:self.textField];
   }
@@ -22,8 +23,7 @@
 %end
 
 %ctor {
-  if (![NSProcessInfo.processInfo.processName isEqualToString:@"mediaserverd"])
-    %init(BaseTableViewCell =
-                         objc_getClass("TWBaseTableViewCell")
-                             ?: objc_getClass("_TtC12TwitchCoreUI17BaseTableViewCell"));
+  %init(BaseTableViewCell =
+                       objc_getClass("TWBaseTableViewCell")
+                           ?: objc_getClass("_TtC12TwitchCoreUI17BaseTableViewCell"));
 }

@@ -3,15 +3,15 @@
 %subclass TWAdBlockSettingsTextField : _TtC12TwitchCoreUI17StandardTextField
 %new
 - (id<UITextFieldDelegate>)delegate {
-  return MSHookIvar<id<UITextFieldDelegate>>(self, "delegate");
+  return object_getIvar(self, class_getInstanceVariable(object_getClass(self), "delegate"));
 }
 %new
 - (void)setDelegate:(id<UITextFieldDelegate>)delegate {
-  MSHookIvar<id<UITextFieldDelegate>>(self, "delegate") = delegate;
+  object_setIvar(self, class_getInstanceVariable(object_getClass(self), "delegate"), delegate);
 }
 %new
 - (UITextField *)textField {
-  return MSHookIvar<UITextField *>(self, "textField");
+  return object_getIvar(self, class_getInstanceVariable(object_getClass(self), "textField"));
 }
 - (BOOL)textFieldShouldBeginEditing:(UITextField *)textField {
   if (![self.delegate respondsToSelector:@selector(textFieldShouldBeginEditing:)]) return YES;
@@ -20,7 +20,6 @@
 - (void)textFieldDidBeginEditing:(UITextField *)textField {
   if ([self.delegate respondsToSelector:@selector(textFieldDidBeginEditing:)])
     [self textFieldDidBeginEditing:textField];
-  MSHookIvar<BOOL>(self, "isEditing") = YES;
   self.backgroundColor = self.lastConfiguredTheme.backgroundBodyColor;
   self.layer.borderColor = self.lastConfiguredTheme.backgroundAccentColor.CGColor;
   self.layer.borderWidth = 2;
@@ -42,7 +41,6 @@
 - (void)textFieldDidEndEditing:(UITextField *)textField {
   if ([self.delegate respondsToSelector:@selector(textFieldDidEndEditing:)])
     [self.delegate textFieldDidEndEditing:textField];
-  MSHookIvar<BOOL>(self, "isEditing") = NO;
   self.backgroundColor = self.lastConfiguredTheme.backgroundInputColor;
   self.layer.borderWidth = 0;
 }
@@ -55,15 +53,13 @@
 }
 - (instancetype)initWithFrame:(CGRect)frame
                  themeManager:(_TtC12TwitchCoreUI21TWDefaultThemeManager *)themeManager {
-  MSHookIvar<int>(self, "maximumLength") = INT_MAX;
   Class originalClass = object_setClass(self, UIView.class);
   if ((self = [self initWithFrame:frame])) {
     object_setClass(self, originalClass);
     self.themeManager = themeManager;
     self.applyShadowPathForElevation = YES;
-    MSHookIvar<UITextField *>(self, "textField") =
-        [[objc_getClass("_TtC12TwitchCoreUI13BaseTextField") alloc] init];
-    UITextField *textField = MSHookIvar<UITextField *>(self, "textField");
+    UITextField *textField = [[objc_getClass("_TtC12TwitchCoreUI13BaseTextField") alloc] init];
+    object_setIvar(self, class_getInstanceVariable(object_getClass(self), "textField"), textField);
     textField.borderStyle = UITextBorderStyleNone;
     textField.spellCheckingType = UITextSpellCheckingTypeNo;
     textField.returnKeyType = UIReturnKeyGo;
@@ -77,17 +73,12 @@
         forControlEvents:UIControlEventEditingChanged];
     [self addSubview:textField];
     CGFloat inputPadding = textField.intrinsicContentSize.width * 2;
-    MSHookIvar<CGFloat>(self, "inputPadding") = inputPadding;
     NSArray<NSLayoutConstraint *> *textFieldConstraints = @[
       [self.leftAnchor constraintEqualToAnchor:textField.leftAnchor constant:-inputPadding],
       [self.rightAnchor constraintEqualToAnchor:textField.rightAnchor constant:inputPadding],
       [self.topAnchor constraintEqualToAnchor:textField.topAnchor],
       [self.bottomAnchor constraintEqualToAnchor:textField.bottomAnchor],
     ];
-    [NSLayoutConstraint deactivateConstraints:MSHookIvar<NSArray<NSLayoutConstraint *> *>(
-                                                  self, "_textFieldConstraints")];
-    MSHookIvar<NSArray<NSLayoutConstraint *> *>(self, "_textFieldConstraints") =
-        textFieldConstraints;
     [NSLayoutConstraint activateConstraints:textFieldConstraints];
   }
   return self;
@@ -98,7 +89,3 @@
   %orig;
 }
 %end
-
-%ctor {
-  if (![NSProcessInfo.processInfo.processName isEqualToString:@"mediaserverd"]) %init;
-}

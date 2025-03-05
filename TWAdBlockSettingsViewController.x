@@ -1,22 +1,24 @@
+#import <dlfcn.h>
 #import "TWAdBlockSettingsViewController.h"
 
-extern "C" NSBundle *tweakBundle;
-extern "C" NSUserDefaults *tweakDefaults;
+extern NSBundle *tweakBundle;
+extern NSUserDefaults *tweakDefaults;
 
 #define LOC(x, d) [tweakBundle localizedStringForKey:x value:d table:nil]
 
 %hook _TtC6Twitch27SettingsSwitchTableViewCell
 %new
 - (id)delegate {
-  return MSHookIvar<id>(self, "delegate");
+  return object_getIvar(self, class_getInstanceVariable(object_getClass(self), "delegate"));
 }
 %new
 - (void)setDelegate:(id)delegate {
-  MSHookIvar<id>(self, "delegate") = delegate;
+  object_setIvar(self, class_getInstanceVariable(object_getClass(self), "delegate"), delegate);
 }
 %new
 - (BOOL)isOn {
-  return MSHookIvar<UISwitch *>(self, "$__lazy_storage_$_switchView").isOn;
+  return [object_getIvar(
+      self, class_getInstanceVariable(object_getClass(self), "$__lazy_storage_$_switchView")) isOn];
 }
 %new
 - (void)configureWithTitle:(NSString *)title
@@ -26,16 +28,16 @@ extern "C" NSUserDefaults *tweakDefaults;
     accessibilityIdentifier:(NSString *)accessibilityIdentifier {
   self.textLabel.text = title;
   self.detailTextLabel.text = subtitle;
-  UISwitch *switchView = MSHookIvar<UISwitch *>(self, "$__lazy_storage_$_switchView");
+  UISwitch *switchView = object_getIvar(
+      self, class_getInstanceVariable(object_getClass(self), "$__lazy_storage_$_switchView"));
   switchView.enabled = isEnabled;
   switchView.on = isOn;
   self.accessibilityIdentifier = accessibilityIdentifier;
 }
 - (void)settingsSwitchToggled {
-  id<SettingsSwitchTableViewCellDelegate> delegate =
-      MSHookIvar<id<SettingsSwitchTableViewCellDelegate>>(self, "delegate");
-  if (![delegate respondsToSelector:@selector(settingsCellSwitchToggled:)]) return %orig;
-  [delegate settingsCellSwitchToggled:self];
+  if (![self.delegate respondsToSelector:@selector(settingsCellSwitchToggled:)])
+    return %orig;
+  [self.delegate settingsCellSwitchToggled:self];
 }
 %end
 
@@ -57,14 +59,14 @@ extern "C" NSUserDefaults *tweakDefaults;
 }
 %new
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-  return self.adblockEnabled ? 2 : 1;
+  return self.adblockEnabled ? 3 : 2;
 }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
   switch (section) {
     case 0:
       return 1;
     case 1:
-      return self.proxyEnabled ? self.customProxyEnabled ? 3 : 2 : 1;
+      return self.adblockEnabled ? self.proxyEnabled ? self.customProxyEnabled ? 3 : 2 : 1 : 0;
     default:
       return 0;
   }
@@ -117,7 +119,7 @@ extern "C" NSUserDefaults *tweakDefaults;
               reuseIdentifier:@"TWAdBlockProxy"];
           TWAdBlockSettingsTextField *textField =
               ((TWAdBlockSettingsTextFieldTableViewCell *)cell).textField;
-          textField.textField.placeholder = PROXY_URL;
+          textField.textField.placeholder = PROXY_ADDR;
           textField.textField.text = [tweakDefaults stringForKey:@"TWAdBlockProxy"];
           textField.delegate = self;
           return cell;
@@ -127,16 +129,32 @@ extern "C" NSUserDefaults *tweakDefaults;
   }
 }
 %new
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+- (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section {
+  NSString *title;
   switch (section) {
     case 0:
-      return LOC(@"settings.adblock.footer", @"Choose whether or not you want to block ads");
+      title = LOC(@"settings.adblock.footer", @"Choose whether or not you want to block ads");
+      break;
     case 1:
-      return LOC(@"settings.proxy.footer",
-                 @"Proxy specific requests through a proxy server based in an ad-free country");
+      title = LOC(@"settings.proxy.footer",
+                  @"Proxy specific requests through a proxy server based in an ad-free country");
+      if (self.adblockEnabled) break;
+    case 2: {
+      _TtC6Twitch12VersionLabel *versionLabel =
+          [[objc_getClass("_TtC6Twitch12VersionLabel") alloc] initWithFrame:CGRectZero];
+      versionLabel.text = @"TwitchAdBlock v" PACKAGE_VERSION;
+      UIStackView *footerStackView =
+          [[UIStackView alloc] initWithArrangedSubviews:@[ versionLabel ]];
+      return footerStackView;
+    }
     default:
       return nil;
   }
+  UITableViewHeaderFooterView *footerView =
+      [[UITableViewHeaderFooterView alloc] initWithReuseIdentifier:nil];
+  footerView.textLabel.text = title;
+  footerView.textLabel.numberOfLines = 0;
+  return footerView;
 }
 %new
 - (void)settingsCellSwitchToggled:(UISwitch *)sender {
@@ -176,16 +194,9 @@ extern "C" NSUserDefaults *tweakDefaults;
   }
 
   [tweakDefaults synchronize];
-  notify_post("com.level3tjg.twitchadblock/updatePrefs");
 }
 %new
 - (void)textFieldDidEndEditing:(UITextField *)textField {
   [tweakDefaults setValue:textField.text forKey:@"TWAdBlockProxy"];
-  [tweakDefaults synchronize];
-  notify_post("com.level3tjg.twitchadblock/updatePrefs");
 }
 %end
-
-%ctor {
-  if (![NSProcessInfo.processInfo.processName isEqualToString:@"mediaserverd"]) %init;
-}
