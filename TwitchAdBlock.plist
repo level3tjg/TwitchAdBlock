@@ -1,1 +1,1 @@
-{ Filter = { Bundles = ( "tv.twitch" ); Executables = ( "mediaserverd" ); }; }
+{ Filter = { Bundles = ( "tv.twitch" ); }; }

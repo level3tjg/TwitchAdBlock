@@ -15,7 +15,7 @@ ifeq ($(LTS),1)
 endif
 
 TARGET := iphone:clang:latest:12.4
-INSTALL_TARGET_PROCESSES = mediaserverd Twitch
+INSTALL_TARGET_PROCESSES = Twitch
 
 ARCHS = arm64
 
@@ -25,10 +25,11 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = TwitchAdBlock
 
-$(TWEAK_NAME)_FILES = $(wildcard *.*m) fishhook/fishhook.c
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Iinclude -DPROXY_URL=@\"firefox.api.cdn-perfprod.com:2023\"
+$(TWEAK_NAME)_FILES = $(filter-out Sideloaded.x, $(wildcard *.x)) $(wildcard *.*m) fishhook/fishhook.c
+$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Iinclude -DPACKAGE_VERSION=@\"$(PACKAGE_VERSION)\"
+$(TWEAK_NAME)_LOGOS_DEFAULT_GENERATOR = internal
 ifeq ($(SIDELOADED),1)
-  $(TWEAK_NAME)_FILES += Sideloaded.x fishhook/fishhook.c
+  $(TWEAK_NAME)_FILES += Sideloaded.x
   CODESIGN_IPA = 0
   ifeq ($(LTS),1)
     $(TWEAK_NAME)_INJECT_DYLIBS = $(THEOS_OBJ_DIR)/TwitchLoginFix.dylib
