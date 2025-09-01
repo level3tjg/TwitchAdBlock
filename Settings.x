@@ -1,5 +1,6 @@
 #import "Settings.h"
 
+extern NSBundle *tweakBundle;
 extern NSUserDefaults *tweakDefaults;
 
 %hook _TtC6Twitch25AccountMenuViewController
@@ -35,19 +36,28 @@ extern NSUserDefaults *tweakDefaults;
               initWithStyle:UITableViewCellStyleSubtitle
             reuseIdentifier:@"Twitch.ConfigurableAccessoryTableViewCell"];
     [cell configureWithTitle:@"TwitchAdBlock"];
-    NSBundle *twCoreUIBundle = [NSBundle bundleWithIdentifier:@"twitch.TwitchCoreUI"];
     cell.accessoryView =
-        [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"arrow-forward-Icon"
-                                                                    inBundle:twCoreUIBundle
-                                               compatibleWithTraitCollection:nil]];
-    cell.useDefaultBackgroundColor = YES;
+        [[UIImageView alloc] initWithImage:[[UIImage imageNamed:@"arrow-forward"
+                                                                    inBundle:tweakBundle
+                                               compatibleWithTraitCollection:nil] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate]];
     Ivar customImageViewIvar = class_getInstanceVariable(object_getClass(cell), "customImageView");
     if (!customImageViewIvar) return cell;
     UIImageView *customImageView = object_getIvar(cell, customImageViewIvar);
-    customImageView.image = [UIImage imageNamed:@"Un-Host-Icon"
-                                       inBundle:twCoreUIBundle
-                  compatibleWithTraitCollection:nil];
+    customImageView.image = [[UIImage imageNamed:@"twab-icon"
+                                       inBundle:tweakBundle
+                  compatibleWithTraitCollection:nil] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     customImageView.hidden = NO;
+
+    if ([cell respondsToSelector:@selector(useDefaultBackgroundColor)]) {
+      cell.useDefaultBackgroundColor = YES;
+    } else {
+      Ivar ivar = class_getInstanceVariable(object_getClass(cell), "useDefaultBackgroundColor");
+      if (ivar) {
+          ptrdiff_t offset = ivar_getOffset(ivar);
+          uint8_t *bytes = (uint8_t *)(__bridge void *)cell;
+          *((BOOL *)(bytes + offset)) = YES;
+      }
+    }
     return cell;
   }
   return %orig;
